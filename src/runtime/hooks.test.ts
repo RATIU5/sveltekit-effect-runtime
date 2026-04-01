@@ -7,6 +7,7 @@ import {
   configureRuntime,
   currentRequestEvent,
   resetRuntimeForTesting,
+  SvelteHandleParams,
   wrapHandle,
   wrapHandleError,
   wrapHandleFetch,
@@ -81,6 +82,25 @@ describe("runtime hook helpers", () => {
     });
 
     await expect(response.text()).resolves.toBe("handled:/hook");
+  });
+});
+
+describe("runtime handle-scoped services", () => {
+  it("provides handle params as a handle-scoped service", async () => {
+    const wrapped = wrapHandle(
+      Effect.gen(function* () {
+        const { event, resolve } = yield* SvelteHandleParams.SvelteHandleParams;
+
+        return yield* Effect.promise(() => Promise.resolve(resolve(event)));
+      }),
+    );
+
+    const response = await wrapped({
+      event: createRequestEvent("/handle-service"),
+      resolve: (event) => new Response(`resolved:${event.url.pathname}`),
+    });
+
+    await expect(response.text()).resolves.toBe("resolved:/handle-service");
   });
 });
 

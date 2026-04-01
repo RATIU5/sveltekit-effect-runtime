@@ -4,7 +4,10 @@ import { Effect, Layer } from "effect";
 
 import { getConfiguredLoadLayer, getConfiguredRequestLayer } from "./config.js";
 import { SvelteKitLoadEvent, SvelteKitRequestEvent } from "./services.js";
+import { SvelteHandleParams } from "./svelte-handle-params.js";
 import { SvelteRequest } from "./svelte-request.js";
+
+import type { SvelteHandleInput } from "./types.js";
 
 const normalizeScopedLayer = (
   layer: Layer.Any,
@@ -16,10 +19,14 @@ const normalizeScopedLayer = (
 export const provideRequestScoped = <A, E, R>(
   effect: Effect.Effect<A, E, R>,
   event: RequestEvent,
+  extraContextLayer?: Layer.Any,
 ): Effect.Effect<A, unknown, unknown> => {
   const requestContextLayer = Layer.mergeAll(
     Layer.succeed(SvelteKitRequestEvent, event),
     SvelteRequest.layer(event),
+    extraContextLayer === undefined
+      ? Layer.empty
+      : normalizeScopedLayer(extraContextLayer),
   );
 
   const requestLayer = getConfiguredRequestLayer();
@@ -35,6 +42,12 @@ export const provideRequestScoped = <A, E, R>(
     Effect.provide([requestContextLayer, requestScopedLayer], { local: true }),
   );
 };
+
+export const provideHandleScoped = <A, E, R>(
+  effect: Effect.Effect<A, E, R>,
+  input: SvelteHandleInput,
+): Effect.Effect<A, unknown, unknown> =>
+  provideRequestScoped(effect, input.event, SvelteHandleParams.layer(input));
 
 export const provideLoadScoped = <A, E, R>(
   effect: Effect.Effect<A, E, R>,

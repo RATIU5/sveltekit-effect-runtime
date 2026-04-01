@@ -6,6 +6,7 @@ export {
   SvelteKitLoadEvent,
   SvelteKitRequestEvent,
 } from "./services.js";
+export { SvelteHandleParams } from "./svelte-handle-params.js";
 export { SvelteRequest } from "./svelte-request.js";
 export { SvelteResponse } from "./svelte-response.js";
 export { wrapHandle } from "./handle.js";

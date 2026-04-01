@@ -1,5 +1,11 @@
 # sveltekit-effect-runtime
 
+## 0.1.5
+
+### Patch Changes
+
+- Added the new SvelteHandleParams interface for working with SvelteKit's handle function params
+
 ## 0.1.4
 
 ### Patch Changes

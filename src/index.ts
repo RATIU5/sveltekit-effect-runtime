@@ -3,6 +3,7 @@ export {
   currentLoadEvent,
   currentRequestEvent,
   resetRuntimeForTesting,
+  SvelteHandleParams,
   SvelteKitLoadEvent,
   SvelteKitRequestEvent,
   SvelteRequest,

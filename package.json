@@ -1,6 +1,6 @@
 {
   "name": "sveltekit-effect-runtime",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Runtime helpers for using Effect in SvelteKit server APIs",
   "keywords": [
     "effect",

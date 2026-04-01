@@ -150,13 +150,20 @@ For hooks:
 
 ```ts
 import {
+  SvelteHandleParams,
   wrapHandle,
   wrapHandleFetch,
   wrapInit,
 } from "sveltekit-effect-runtime";
 
 export const init = wrapInit(myInitEffect);
-export const handle = wrapHandle(myHandleEffect);
+export const handle = wrapHandle(
+  Effect.gen(function* () {
+    const { event, resolve } = yield* SvelteHandleParams.SvelteHandleParams;
+
+    return yield* Effect.promise(() => resolve(event));
+  }),
+);
 export const handleFetch = wrapHandleFetch(myHandleFetchEffect);
 ```
 

@@ -3,11 +3,11 @@ import type { Handle } from "@sveltejs/kit";
 import { Effect } from "effect";
 
 import { runWithRuntime } from "./managed-runtime.js";
-import { provideRequestScoped } from "./provide-scoped.js";
+import { provideHandleScoped } from "./provide-scoped.js";
+
+import type { SvelteHandleInput as HandleInput } from "./types.js";
 
 type EffectCandidate<A> = A | Effect.Effect<A, unknown, unknown>;
-
-type HandleInput = Parameters<Handle>[0];
 
 type HandleSource =
   | ((
@@ -24,7 +24,7 @@ const runCandidate = async <A>(
     return candidate;
   }
 
-  return runWithRuntime(provideRequestScoped(candidate, input.event));
+  return runWithRuntime(provideHandleScoped(candidate, input));
 };
 
 export const wrapHandle =

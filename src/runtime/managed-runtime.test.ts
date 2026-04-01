@@ -1,7 +1,11 @@
 import { Effect, Layer, ServiceMap, type Layer as LayerType } from "effect";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { configureRuntime, resetRuntimeForTesting, wrapHandler } from "./index.js";
+import {
+  configureRuntime,
+  resetRuntimeForTesting,
+  wrapHandler,
+} from "./index.js";
 import {
   disposeRuntime,
   getOrCreateRuntime,
