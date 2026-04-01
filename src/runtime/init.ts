@@ -2,7 +2,7 @@ import type { ServerInit } from "@sveltejs/kit";
 
 import { Effect } from "effect";
 
-import { runWithRuntime } from "./managed-runtime";
+import { runWithRuntime } from "./managed-runtime.js";
 
 type EffectCandidate<A> = A | Effect.Effect<A, unknown, unknown>;
 

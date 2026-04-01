@@ -1,19 +1,19 @@
-export { configureRuntime } from "./config";
-export { resetRuntimeForTesting } from "./managed-runtime";
+export { configureRuntime } from "./config.js";
+export { resetRuntimeForTesting } from "./managed-runtime.js";
 export {
   currentLoadEvent,
   currentRequestEvent,
   SvelteKitLoadEvent,
   SvelteKitRequestEvent,
-} from "./services";
-export { SvelteRequest } from "./svelte-request";
-export { SvelteResponse } from "./svelte-response";
-export { wrapHandle } from "./handle";
-export { wrapHandleError } from "./handle-error";
-export { wrapHandleFetch } from "./handle-fetch";
-export { wrapHandleValidationError } from "./handle-validation-error";
-export { wrapHandler } from "./server-handler";
-export { wrapActions } from "./actions";
-export { wrapInit } from "./init";
-export { wrapServerLoad } from "./server-load";
-export { universalLoad } from "./universal-load";
+} from "./services.js";
+export { SvelteRequest } from "./svelte-request.js";
+export { SvelteResponse } from "./svelte-response.js";
+export { wrapHandle } from "./handle.js";
+export { wrapHandleError } from "./handle-error.js";
+export { wrapHandleFetch } from "./handle-fetch.js";
+export { wrapHandleValidationError } from "./handle-validation-error.js";
+export { wrapHandler } from "./server-handler.js";
+export { wrapActions } from "./actions.js";
+export { wrapInit } from "./init.js";
+export { wrapServerLoad } from "./server-load.js";
+export { universalLoad } from "./universal-load.js";

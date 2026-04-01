@@ -2,9 +2,9 @@ import type { LoadEvent, RequestEvent } from "@sveltejs/kit";
 
 import { Effect, Layer } from "effect";
 
-import { getConfiguredLoadLayer, getConfiguredRequestLayer } from "./config";
-import { SvelteKitLoadEvent, SvelteKitRequestEvent } from "./services";
-import { SvelteRequest } from "./svelte-request";
+import { getConfiguredLoadLayer, getConfiguredRequestLayer } from "./config.js";
+import { SvelteKitLoadEvent, SvelteKitRequestEvent } from "./services.js";
+import { SvelteRequest } from "./svelte-request.js";
 
 const normalizeScopedLayer = (
   layer: Layer.Any,

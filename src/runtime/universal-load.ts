@@ -4,8 +4,8 @@ import type { Load, LoadEvent } from "@sveltejs/kit";
 // oxlint-disable typescript/no-explicit-any
 import { Effect } from "effect";
 
-import { runWithRuntime } from "./managed-runtime";
-import { provideLoadScoped } from "./provide-scoped";
+import { runWithRuntime } from "./managed-runtime.js";
+import { provideLoadScoped } from "./provide-scoped.js";
 
 type LoadResult = Record<string, any> | void;
 

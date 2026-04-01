@@ -5,7 +5,7 @@ import {
   getConfiguredRuntimeLayer,
   lockRuntimeConfiguration,
   resetConfiguredRuntime,
-} from "./config";
+} from "./config.js";
 
 let runtime: ManagedRuntime.ManagedRuntime<unknown, unknown> | undefined =
   undefined;

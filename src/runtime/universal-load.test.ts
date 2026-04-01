@@ -8,7 +8,7 @@ import {
   currentLoadEvent,
   resetRuntimeForTesting,
   universalLoad,
-} from "./index";
+} from "./index.js";
 
 const createLoadEvent = (pathname = "/universal"): LoadEvent => ({
   data: {},

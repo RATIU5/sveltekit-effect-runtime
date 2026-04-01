@@ -16,4 +16,4 @@ export {
   wrapHandler,
   wrapInit,
   wrapServerLoad,
-} from "./runtime";
+} from "./runtime/index.js";

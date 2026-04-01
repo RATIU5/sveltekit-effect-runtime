@@ -3,8 +3,8 @@ import type { RequestEvent, RequestHandler } from "@sveltejs/kit";
 // oxlint-disable require-await
 import { Effect } from "effect";
 
-import { runWithRuntime } from "./managed-runtime";
-import { provideRequestScoped } from "./provide-scoped";
+import { runWithRuntime } from "./managed-runtime.js";
+import { provideRequestScoped } from "./provide-scoped.js";
 
 type EffectCandidate<A> = A | Effect.Effect<A, unknown, unknown>;
 

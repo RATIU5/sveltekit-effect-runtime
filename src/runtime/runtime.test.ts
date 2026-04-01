@@ -16,7 +16,7 @@ import {
   wrapActions,
   wrapHandler,
   wrapServerLoad,
-} from "./index";
+} from "./index.js";
 
 const createCookies = (): Cookies => ({
   get: () => undefined,

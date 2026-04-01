@@ -12,8 +12,8 @@ import {
   wrapHandleFetch,
   wrapHandleValidationError,
   wrapInit,
-} from "./index";
-import { getOrCreateRuntime } from "./managed-runtime";
+} from "./index.js";
+import { getOrCreateRuntime } from "./managed-runtime.js";
 
 const createRequestEvent = (pathname = "/test"): RequestEvent => ({
   url: new URL(`https://example.com${pathname}`),
