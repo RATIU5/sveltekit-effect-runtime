@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@changesets/config/schema.json",
   "changelog": [
     "@changesets/changelog-github",
-    { "repo": "RATIU5/sveltkit-effect-runtime" }
+    { "repo": "RATIU5/sveltekit-effect-runtime" }
   ],
   "commit": false,
   "fixed": [],

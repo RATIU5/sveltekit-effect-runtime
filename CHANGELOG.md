@@ -1,5 +1,11 @@
 # sveltekit-effect-runtime
 
+## 0.1.2
+
+### Patch Changes
+
+- Fix the changeset config repository
+
 ## 0.1.1
 
 ### Patch Changes
