@@ -1,5 +1,11 @@
 # sveltekit-effect-runtime
 
+## 0.1.1
+
+### Patch Changes
+
+- Update readme with install instructions and more examples
+
 ## 0.1.0
 
 ### Minor Changes
