@@ -1,0 +1,100 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "unicorn",
+    "oxc",
+    "import",
+    "promise",
+    "node",
+    "eslint"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "warn",
+    "pedantic": "warn",
+    "style": "warn"
+  },
+  "options": {
+    "typeAware": true
+  },
+  "rules": {
+    "sort-imports": "off",
+    "new-cap": "off",
+    "no-ternary": "off",
+    "func-names": ["warn", "always", { "generators": "never" }],
+    "oxc/no-map-spread": "off",
+    "oxc/no-accumulating-spread": "off",
+    "no-negated-condition": "off",
+    "max-classes-per-file": "off",
+    "import/no-named-export": "off",
+    "import/group-exports": "off",
+    "import/no-namespace": "off",
+    "import/no-unassigned-import": "off",
+    "import/prefer-default-export": "off",
+    "promise/prefer-await-to-callbacks": "off",
+    "promise/prefer-await-to-then": "off",
+    "unicorn/prefer-top-level-await": "off",
+    "unicorn/no-useless-undefined": "off",
+    "no-magic-numbers": "off",
+    "sort-keys": "off",
+    "id-length": [
+      "warn",
+      { "min": 1, "exceptions": ["e", "m", "i", "j", "k", "_"] }
+    ],
+    "unicorn/no-null": "warn",
+    "no-console": "warn",
+    "eqeqeq": "error",
+    "no-var": "error",
+    "import/no-cycle": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "warn",
+    "typescript/consistent-type-imports": [
+      "error",
+      {
+        "prefer": "type-imports",
+        "fixStyle": "inline-type-imports",
+        "disallowTypeAnnotations": false
+      }
+    ],
+    "import/consistent-type-specifier-style": "off",
+    "typescript/no-unnecessary-type-assertion": "error",
+    "typescript/no-unnecessary-type-constraint": "error",
+    "typescript/no-useless-empty-export": "error",
+    "typescript/no-import-type-side-effects": "error",
+    "import/no-duplicates": "error",
+    "import/no-self-import": "error",
+    "import/no-empty-named-blocks": "error",
+    "oxc/misrefactored-assign-op": "error",
+    "eslint/no-useless-constructor": "error",
+    "eslint/no-unneeded-ternary": "error",
+    "eslint/no-useless-concat": "error",
+    "unicorn/prefer-array-flat-map": "error",
+    "unicorn/no-abusive-eslint-disable": "error",
+    "typescript/no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "typescript/array-type": [
+      "error",
+      {
+        "default": "generic",
+        "readonly": "generic"
+      }
+    ]
+  },
+  "ignorePatterns": ["dist/**", "node_modules/**"],
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.spec.ts", "**/test/**/*.ts"],
+      "rules": {
+        "typescript/no-explicit-any": "off",
+        "no-console": "off"
+      }
+    }
+  ]
+}
