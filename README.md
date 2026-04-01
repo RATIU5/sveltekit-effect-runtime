@@ -5,10 +5,12 @@
 ## Install
 
 ```sh
-pnpm add sveltekit-effect-runtime effect
+pnpm add sveltekit-effect-runtime effect@4.0.0-beta.43
 # OR
-bun add sveltekit-effect-runtime effect
+bun add sveltekit-effect-runtime effect@4.0.0-beta.43
 ```
+
+**Note**: Update the Effect v4 version to the latest version. Effect 4 is only supported.
 
 You also need a compatible `@sveltejs/kit` project.
 
@@ -73,10 +75,7 @@ Server actions can also use the current request and return `fail(...)` values:
 // src/routes/+page.server.ts
 import { fail } from "@sveltejs/kit";
 import { Effect } from "effect";
-import {
-  SvelteRequest,
-  wrapActions,
-} from "sveltekit-effect-runtime";
+import { SvelteRequest, wrapActions } from "sveltekit-effect-runtime";
 
 export const actions = wrapActions({
   add: Effect.gen(function* () {
@@ -120,10 +119,7 @@ Server loads work the same way:
 ```ts
 // src/routes/+page.server.ts
 import { Effect } from "effect";
-import {
-  currentRequestEvent,
-  wrapServerLoad,
-} from "sveltekit-effect-runtime";
+import { currentRequestEvent, wrapServerLoad } from "sveltekit-effect-runtime";
 
 export const load = wrapServerLoad(
   currentRequestEvent.pipe(
@@ -139,10 +135,7 @@ Universal loads are supported too. On the server they use the managed runtime; i
 ```ts
 // src/routes/+layout.ts
 import { Effect } from "effect";
-import {
-  currentLoadEvent,
-  universalLoad,
-} from "sveltekit-effect-runtime";
+import { currentLoadEvent, universalLoad } from "sveltekit-effect-runtime";
 
 export const load = universalLoad(
   currentLoadEvent.pipe(
