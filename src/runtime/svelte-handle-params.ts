@@ -1,4 +1,4 @@
-import type { Handle } from "@sveltejs/kit";
+import type { Handle, RequestEvent, ResolveOptions } from "@sveltejs/kit";
 
 import { Effect, Layer, ServiceMap } from "effect";
 
@@ -8,7 +8,27 @@ const SvelteHandleParamsService = ServiceMap.Service<HandleInput>(
   "sveltekit-effect-runtime/SvelteHandleParams",
 );
 
-const currentSvelteHandleParams = Effect.service(SvelteHandleParamsService);
+const currentSvelteHandleParams: Effect.Effect<
+  SvelteHandleParamsValue,
+  never,
+  HandleInput
+> = Effect.service(SvelteHandleParamsService).pipe(
+  Effect.map(
+    ({ event, resolve }): SvelteHandleParamsValue => ({
+      event,
+      resolve: (e, opts) =>
+        Effect.promise(() => Promise.resolve(resolve(e, opts))),
+    }),
+  ),
+);
+
+export interface SvelteHandleParamsValue {
+  readonly event: RequestEvent;
+  readonly resolve: (
+    event: RequestEvent,
+    opts?: ResolveOptions,
+  ) => Effect.Effect<Response>;
+}
 
 export const SvelteHandleParams = {
   Service: SvelteHandleParamsService,

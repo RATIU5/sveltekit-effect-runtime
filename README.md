@@ -161,7 +161,7 @@ export const handle = wrapHandle(
   Effect.gen(function* () {
     const { event, resolve } = yield* SvelteHandleParams.SvelteHandleParams;
 
-    return yield* Effect.promise(() => resolve(event));
+    return yield* resolve(event);
   }),
 );
 export const handleFetch = wrapHandleFetch(myHandleFetchEffect);

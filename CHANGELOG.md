@@ -1,5 +1,12 @@
 # sveltekit-effect-runtime
 
+## 0.2.0
+
+### Minor Changes
+
+- SvelteHandleParams.resolve now returns an Effect<Response>.
+  Replace Effect.promise(() => resolve(event)) with yield\* resolve(event).
+
 ## 0.1.5
 
 ### Patch Changes

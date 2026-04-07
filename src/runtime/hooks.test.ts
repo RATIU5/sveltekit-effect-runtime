@@ -91,7 +91,7 @@ describe("runtime handle-scoped services", () => {
       Effect.gen(function* () {
         const { event, resolve } = yield* SvelteHandleParams.SvelteHandleParams;
 
-        return yield* Effect.promise(() => Promise.resolve(resolve(event)));
+        return yield* resolve(event);
       }),
     );
 
