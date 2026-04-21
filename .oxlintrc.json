@@ -69,6 +69,7 @@
     "oxc/misrefactored-assign-op": "error",
     "eslint/no-useless-constructor": "error",
     "eslint/no-unneeded-ternary": "error",
+    "typescript/prefer-readonly-parameter-types": "off",
     "eslint/no-useless-concat": "error",
     "unicorn/prefer-array-flat-map": "error",
     "unicorn/no-abusive-eslint-disable": "error",
