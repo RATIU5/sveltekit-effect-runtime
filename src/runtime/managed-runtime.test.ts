@@ -103,11 +103,17 @@ describe("managed runtime disposal", () => {
       ),
     });
 
-    await runWithRuntime(useDisposalProbe(() => events.push("acquire")));
+    await runWithRuntime(
+      useDisposalProbe(() => {
+        events.push("acquire");
+      }),
+    );
 
     const disposePromise = disposeRuntime();
     const rerunPromise = runWithRuntime(
-      useDisposalProbe(() => events.push("acquire")),
+      useDisposalProbe(() => {
+        events.push("acquire");
+      }),
     );
 
     await Promise.all([disposePromise, rerunPromise]);
