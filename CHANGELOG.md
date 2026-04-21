@@ -1,5 +1,11 @@
 # sveltekit-effect-runtime
 
+## 0.3.0
+
+### Minor Changes
+
+- Updated Effect v4 to latest, renamed Effect.ServiceMap -> Effect.Context
+
 ## 0.2.0
 
 ### Minor Changes
