@@ -1,4 +1,4 @@
-import { Effect, Layer, ServiceMap } from "effect";
+import { Effect, Layer, Context } from "effect";
 import {
   currentLoadEvent,
   currentRequestEvent,
@@ -18,7 +18,7 @@ export interface ExampleRequestContext {
   userAgent: string;
 }
 
-export const ExampleRequestContext = ServiceMap.Service<ExampleRequestContext>(
+export const ExampleRequestContext = Context.Service<ExampleRequestContext>(
   "example/ExampleRequestContext",
 );
 
@@ -43,7 +43,7 @@ export interface ExampleLoadContext {
   routeId: string | null;
 }
 
-export const ExampleLoadContext = ServiceMap.Service<ExampleLoadContext>(
+export const ExampleLoadContext = Context.Service<ExampleLoadContext>(
   "example/ExampleLoadContext",
 );
 

@@ -1,4 +1,4 @@
-import { Effect, Layer, ServiceMap, type Layer as LayerType } from "effect";
+import { Effect, Layer, Context, type Layer as LayerType } from "effect";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
@@ -12,7 +12,7 @@ import {
   runWithRuntime,
 } from "./managed-runtime.js";
 
-const DisposalProbe = ServiceMap.Service<string>(
+const DisposalProbe = Context.Service<string>(
   "sveltekit-effect-runtime/DisposalProbe",
 );
 

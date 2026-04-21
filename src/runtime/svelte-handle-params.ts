@@ -1,10 +1,10 @@
 import type { Handle, RequestEvent, ResolveOptions } from "@sveltejs/kit";
 
-import { Effect, Layer, ServiceMap } from "effect";
+import { Effect, Layer, Context } from "effect";
 
 type HandleInput = Parameters<Handle>[0];
 
-const SvelteHandleParamsService = ServiceMap.Service<HandleInput>(
+const SvelteHandleParamsService = Context.Service<HandleInput>(
   "sveltekit-effect-runtime/SvelteHandleParams",
 );
 

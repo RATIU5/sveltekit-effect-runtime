@@ -1,7 +1,7 @@
 import type { RequestEvent } from "@sveltejs/kit";
 
-import { Effect, Layer, ServiceMap } from "effect";
-const SvelteRequestService = ServiceMap.Service<Request>(
+import { Effect, Layer, Context } from "effect";
+const SvelteRequestService = Context.Service<Request>(
   "sveltekit-effect-runtime/SvelteRequest",
 );
 

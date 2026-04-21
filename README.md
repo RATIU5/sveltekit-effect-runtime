@@ -5,9 +5,9 @@
 ## Install
 
 ```sh
-pnpm add sveltekit-effect-runtime effect@4.0.0-beta.43
+pnpm add sveltekit-effect-runtime effect@4.0.0-beta.52
 # OR
-bun add sveltekit-effect-runtime effect@4.0.0-beta.43
+bun add sveltekit-effect-runtime effect@4.0.0-beta.52
 ```
 
 **Note**: Update the Effect v4 version to the latest version. Effect 4 is only supported.
@@ -170,15 +170,15 @@ export const handleFetch = wrapHandleFetch(myHandleFetchEffect);
 You can also install per-request or per-load services through `configureRuntime(...)`:
 
 ```ts
-import { Effect, Layer, ServiceMap } from "effect";
+import { Effect, Layer, Context } from "effect";
 import {
   configureRuntime,
   currentLoadEvent,
   currentRequestEvent,
 } from "sveltekit-effect-runtime";
 
-const RequestPath = ServiceMap.Service<string>("app/RequestPath");
-const RouteId = ServiceMap.Service<string | null>("app/RouteId");
+const RequestPath = Context.Service<string>("app/RequestPath");
+const RouteId = Context.Service<string | null>("app/RouteId");
 
 configureRuntime({
   requestLayer: Layer.effect(RequestPath)(
@@ -197,9 +197,9 @@ import {
   configureRuntime,
   currentRequestEvent,
 } from "sveltekit-effect-runtime";
-import { Effect, Layer, ServiceMap } from "effect";
+import { Effect, Layer, Context } from "effect";
 
-const RequestPath = ServiceMap.Service<string>("app/RequestPath");
+const RequestPath = Context.Service<string>("app/RequestPath");
 
 configureRuntime({
   requestLayer: Layer.effect(RequestPath)(

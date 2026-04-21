@@ -1,14 +1,14 @@
 import type { LoadEvent, RequestEvent } from "@sveltejs/kit";
 
-import { Effect, ServiceMap } from "effect";
+import { Effect, Context } from "effect";
 
-export const SvelteKitRequestEvent = ServiceMap.Service<RequestEvent>(
+export const SvelteKitRequestEvent = Context.Service<RequestEvent>(
   "sveltekit-effect-runtime/SvelteKitRequestEvent",
 );
 
 export const currentRequestEvent = Effect.service(SvelteKitRequestEvent);
 
-export const SvelteKitLoadEvent = ServiceMap.Service<LoadEvent>(
+export const SvelteKitLoadEvent = Context.Service<LoadEvent>(
   "sveltekit-effect-runtime/SvelteKitLoadEvent",
 );
 

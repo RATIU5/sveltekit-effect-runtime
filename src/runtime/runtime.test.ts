@@ -4,7 +4,7 @@ import {
   type RequestEvent,
   type ServerLoadEvent,
 } from "@sveltejs/kit";
-import { Effect, Layer, ServiceMap } from "effect";
+import { Effect, Layer, Context } from "effect";
 import { describe, expect, it, beforeEach } from "vitest";
 
 import {
@@ -63,9 +63,7 @@ const createServerLoadEvent = (pathname = "/load"): ServerLoadEvent => {
   return event;
 };
 
-const TestPath = ServiceMap.Service<string>(
-  "sveltekit-effect-runtime/TestPath",
-);
+const TestPath = Context.Service<string>("sveltekit-effect-runtime/TestPath");
 
 beforeEach(async () => {
   await resetRuntimeForTesting();
