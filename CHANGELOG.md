@@ -1,5 +1,11 @@
 # sveltekit-effect-runtime
 
+## 0.3.1
+
+### Patch Changes
+
+- [`cb48c96`](https://github.com/RATIU5/sveltekit-effect-runtime/commit/cb48c964319f9000b8fb52bdd0cf6ce82e6fbb96) Thanks [@RATIU5](https://github.com/RATIU5)! - Updated the example directory and exclude map files from output
+
 ## 0.3.0
 
 ### Minor Changes
