@@ -2,7 +2,7 @@
 
 This SvelteKit app is a local consumer of `sveltekit-effect-runtime`.
 
-It aliases `sveltekit-effect-runtime` to `../src/index.ts` in [vite.config.ts](/Users/john.memmott/Developer/sveltekit-effect-bridge/example/vite.config.ts) and [tsconfig.json](/Users/john.memmott/Developer/sveltekit-effect-bridge/example/tsconfig.json), so you can iterate on the library and the example side by side without publishing a package.
+It aliases `sveltekit-effect-runtime` to `../src/index.ts` in [vite.config.js](/Users/john.memmott/Developer/sveltekit-effect-bridge/example/vite.config.js) and [tsconfig.json](/Users/john.memmott/Developer/sveltekit-effect-bridge/example/tsconfig.json), so you can iterate on the library and the example side by side without publishing a package.
 
 ## What it demonstrates
 

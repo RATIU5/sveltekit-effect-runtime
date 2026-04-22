@@ -3,6 +3,8 @@
   "exclude": ["src/**/*.test.ts"],
   "compilerOptions": {
     "noEmit": false,
-    "allowImportingTsExtensions": false
+    "allowImportingTsExtensions": false,
+    "declarationMap": false,
+    "sourceMap": false
   }
 }

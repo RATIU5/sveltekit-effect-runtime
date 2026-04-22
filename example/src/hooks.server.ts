@@ -1,6 +1,7 @@
 import { loadContextLayer, requestContextLayer } from "$lib/demo/services";
 import { Effect } from "effect";
 import {
+  SvelteHandleParams,
   SvelteRequest,
   configureRuntime,
   wrapHandle,
@@ -18,8 +19,9 @@ export const init = wrapInit(() => {
   });
 });
 
-export const handle = wrapHandle(({ event, resolve }) =>
+export const handle = wrapHandle(
   Effect.gen(function* () {
+    const { event, resolve } = yield* SvelteHandleParams.SvelteHandleParams;
     const request = yield* SvelteRequest.SvelteRequest;
 
     event.locals.requestId = crypto.randomUUID().slice(0, 8);
@@ -30,7 +32,7 @@ export const handle = wrapHandle(({ event, resolve }) =>
       requestId: event.locals.requestId,
     });
 
-    return yield* Effect.promise(() => Promise.resolve(resolve(event)));
+    return yield* resolve(event);
   }),
 );
 
