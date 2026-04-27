@@ -1,5 +1,11 @@
 # sveltekit-effect-runtime
 
+## 1.1.0
+
+### Minor Changes
+
+- [`aeb57f5`](https://github.com/RATIU5/sveltekit-effect-runtime/commit/aeb57f59c62d84b80b3c6ebcdcaf0ee14d664e52) Thanks [@RATIU5](https://github.com/RATIU5)! - Add new handle method for sveltekit hook server files
+
 ## 1.0.0
 
 ### Major Changes
