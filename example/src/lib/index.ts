@@ -1,15 +1,16 @@
-import { error, redirect } from "@sveltejs/kit";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+
+import * as appServer from "$app/server";
+import { error, redirect } from "@sveltejs/kit";
 import { Context, Data } from "effect";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-
 import {
   CurrentRequestEvent,
   CurrentServerLoadEvent,
   SvelteKitEffectRuntime,
   type SvelteKitEffectRuntime as RuntimeBridge,
-} from "../../../src/index";
+} from "sveltekit-effect-runtime";
 
 const schema = <Input, Output>(
   validate: StandardSchemaV1.Props<Input, Output>["validate"],
@@ -61,7 +62,9 @@ class DemoStore extends Context.Service<
   {
     readonly increment: (amount: number) => Effect.Effect<number>;
     readonly rememberName: (name: string) => Effect.Effect<string>;
-    readonly saveNote: (message: string) => Effect.Effect<ReadonlyArray<string>>;
+    readonly saveNote: (
+      message: string,
+    ) => Effect.Effect<ReadonlyArray<string>>;
     readonly snapshot: () => Effect.Effect<{
       readonly counter: number;
       readonly lastName: string;
@@ -104,45 +107,43 @@ const AppLayer = Layer.mergeAll(
   }),
 );
 
-const runtime: RuntimeBridge<
-  AppConfig | DemoStore,
-  RequestMeta,
-  LoadMeta
-> = SvelteKitEffectRuntime.make({
-  layer: AppLayer,
-  requestLayer: Layer.effect(RequestMeta)(
-    Effect.gen(function* () {
-      const event = yield* CurrentRequestEvent.asEffect();
-      const config = yield* AppConfig.asEffect();
-      return {
-        appName: config.appName,
-        requestId: crypto.randomUUID(),
-        path: event.url.pathname,
-        userAgent: event.request.headers.get("user-agent") ?? "unknown",
-      };
-    }),
-  ),
-  loadLayer: Layer.effect(LoadMeta)(
-    Effect.gen(function* () {
-      const event = yield* CurrentServerLoadEvent.asEffect();
-      const config = yield* AppConfig.asEffect();
-      return {
-        appName: config.appName,
-        routeId: event.route.id,
-        path: event.url.pathname,
-      };
-    }),
-  ),
-  mapError: (failure) => {
-    if (failure instanceof NotFound) {
-      return error(404, { message: failure.message });
-    }
-    if (failure instanceof NeedsLogin) {
-      return redirect(303, `/login?next=${encodeURIComponent(failure.next)}`);
-    }
-    return failure;
-  },
-});
+const runtime: RuntimeBridge<AppConfig | DemoStore, RequestMeta, LoadMeta> =
+  SvelteKitEffectRuntime.make({
+    layer: AppLayer,
+    remote: appServer,
+    requestLayer: Layer.effect(RequestMeta)(
+      Effect.gen(function* () {
+        const event = yield* CurrentRequestEvent.asEffect();
+        const config = yield* AppConfig.asEffect();
+        return {
+          appName: config.appName,
+          requestId: crypto.randomUUID(),
+          path: event.url.pathname,
+          userAgent: event.request.headers.get("user-agent") ?? "unknown",
+        };
+      }),
+    ),
+    loadLayer: Layer.effect(LoadMeta)(
+      Effect.gen(function* () {
+        const event = yield* CurrentServerLoadEvent.asEffect();
+        const config = yield* AppConfig.asEffect();
+        return {
+          appName: config.appName,
+          routeId: event.route.id,
+          path: event.url.pathname,
+        };
+      }),
+    ),
+    mapError: (failure) => {
+      if (failure instanceof NotFound) {
+        return error(404, { message: failure.message });
+      }
+      if (failure instanceof NeedsLogin) {
+        return redirect(303, `/login?next=${encodeURIComponent(failure.next)}`);
+      }
+      return failure;
+    },
+  });
 
 const numberSchema = schema<number, number>((value) =>
   typeof value === "number" && Number.isFinite(value)

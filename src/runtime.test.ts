@@ -5,6 +5,7 @@
 
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
+import * as appServerModule from "$app/server";
 import {
   error as kitError,
   fail,
@@ -17,8 +18,8 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CurrentRequestEvent, CurrentServerLoadEvent } from "./events";
-import { SvelteKitEffectRuntime } from "./runtime";
+import { CurrentRequestEvent, CurrentServerLoadEvent } from "./events.js";
+import { SvelteKitEffectRuntime } from "./runtime.js";
 
 const appServer = vi.hoisted(() => {
   let currentRequestEvent: RequestEvent | undefined = undefined;
@@ -59,6 +60,8 @@ vi.mock("$app/server", () => ({
   getRequestEvent: () => appServer.currentRequestEvent,
   query: appServer.query,
 }));
+
+const remote = appServerModule;
 
 class AppValue extends Context.Service<AppValue, string>()("test/AppValue") {}
 
@@ -279,7 +282,7 @@ describe("SvelteKitEffectRuntime", () => {
   });
 
   it("passes SvelteKit remote form payloads into effect callbacks", async () => {
-    const runtime = SvelteKitEffectRuntime.make();
+    const runtime = SvelteKitEffectRuntime.make({ remote });
     const event = makeRequestEvent("/remote-form");
     const issue = vi.fn();
     appServer.currentRequestEvent = event;
@@ -389,6 +392,7 @@ describe("SvelteKitEffectRuntime", () => {
   it("passes remote query input through with request context and request layer", async () => {
     const runtime = SvelteKitEffectRuntime.make({
       layer: Layer.succeed(AppValue)("app-value"),
+      remote,
       requestLayer: Layer.effect(RequestInfo)(
         Effect.gen(function* () {
           const event = yield* CurrentRequestEvent.asEffect();
@@ -436,6 +440,7 @@ describe("SvelteKitEffectRuntime", () => {
 
   it("uses the remote layer for remote functions when supplied", async () => {
     const runtime = SvelteKitEffectRuntime.make({
+      remote,
       requestLayer: Layer.succeed(RequestInfo)({
         app: "request",
         path: "/wrong",
@@ -473,6 +478,7 @@ describe("SvelteKitEffectRuntime", () => {
 
   it("passes remote command input through with request context and request layer", async () => {
     const runtime = SvelteKitEffectRuntime.make({
+      remote,
       requestLayer: Layer.effect(RequestInfo)(
         Effect.gen(function* () {
           const event = yield* CurrentRequestEvent.asEffect();

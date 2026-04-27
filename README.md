@@ -14,6 +14,11 @@ bun add sveltekit-effect-runtime effect@4.0.0-beta.52
 
 Effect v4 is required. You also need a compatible `@sveltejs/kit` project.
 
+The package does not require Vite `ssr.noExternal` configuration. Remote
+function helpers use SvelteKit's virtual `$app/server` module through an
+explicit `remote` option, so that virtual import stays in your SvelteKit app
+instead of inside the published package.
+
 ## Quick Start
 
 Create one runtime instance and reuse it from your SvelteKit server modules.
@@ -64,6 +69,8 @@ You can also pass:
 - `requestLayer`: fresh per handler/action invocation
 - `loadLayer`: fresh per server `load` invocation
 - `remoteLayer`: fresh per remote query/command/form invocation
+- `remote`: SvelteKit's `$app/server` exports, required when using
+  `query`, `command`, or `form`
 - `mapError`: edge error translation
 
 When `remoteLayer` is omitted, remote functions use `requestLayer`.
@@ -241,6 +248,18 @@ The runtime includes wrappers for SvelteKit remote functions:
 - `runtime.form(...)`
 
 Remote functions depend on SvelteKit's remote-function support and must be enabled in your SvelteKit app.
+Because `$app/server` is a SvelteKit virtual module, import it in your app and
+pass it to `SvelteKitEffectRuntime.make(...)`:
+
+```ts
+// src/lib/server/runtime.ts
+import * as appServer from "$app/server";
+import { SvelteKitEffectRuntime } from "sveltekit-effect-runtime";
+
+export const runtime = SvelteKitEffectRuntime.make({
+  remote: appServer,
+});
+```
 
 ```ts
 // src/routes/data.remote.ts
@@ -354,6 +373,7 @@ const runtime = SvelteKitEffectRuntime.make({
   requestLayer,
   loadLayer,
   remoteLayer,
+  remote,
   mapError,
 });
 

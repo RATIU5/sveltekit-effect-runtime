@@ -1,5 +1,13 @@
 # sveltekit-effect-runtime
 
+## 1.2.1
+
+### Patch Changes
+
+- Fix published ESM relative imports and remove top-level SvelteKit virtual
+  module imports from the package root. Remote helpers now receive `$app/server`
+  through the runtime `remote` option.
+
 ## 1.2.0
 
 ### Minor Changes

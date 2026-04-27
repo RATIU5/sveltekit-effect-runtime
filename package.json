@@ -1,6 +1,6 @@
 {
   "name": "sveltekit-effect-runtime",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Runtime helpers for using Effect in SvelteKit server APIs",
   "keywords": [
     "effect",
@@ -31,9 +31,11 @@
   ],
   "type": "module",
   "types": "./dist/index.d.ts",
+  "svelte": "./dist/index.js",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "svelte": "./dist/index.js",
       "import": "./dist/index.js"
     }
   },
@@ -45,6 +47,7 @@
     "fmt:check": "oxfmt --check",
     "fmt": "oxfmt",
     "test": "vitest run --exclude .reference/** --passWithNoTests",
+    "prepack": "bun run build",
     "prepublishOnly": "bun typecheck && bun lint:check && pnpm test && pnpm build"
   },
   "devDependencies": {

@@ -15,19 +15,17 @@ import type {
   ServerLoadEvent,
 } from "@sveltejs/kit";
 
-import {
-  command as remoteCommand,
-  form as remoteForm,
-  getRequestEvent,
-  query as remoteQuery,
-} from "$app/server";
 import { Context } from "effect";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as ManagedRuntime from "effect/ManagedRuntime";
 
-import { translateActionExit, translateExit, type ErrorMapper } from "./errors";
-import { CurrentRequestEvent, CurrentServerLoadEvent } from "./events";
+import {
+  translateActionExit,
+  translateExit,
+  type ErrorMapper,
+} from "./errors.js";
+import { CurrentRequestEvent, CurrentServerLoadEvent } from "./events.js";
 
 // SvelteKit's published types for `command` declare the callback as
 // `(arg) => Output` — unlike `query` / `form` which use
@@ -62,6 +60,13 @@ type InvocationLayerFactory<Event, RIn, ROut, E = never> =
     ) =>
       | Layer.Layer<ROut, E, RIn>
       | Effect.Effect<Layer.Layer<ROut, E, RIn>, E, RIn>);
+
+interface SvelteKitServerRemoteApi {
+  readonly query: typeof import("$app/server").query;
+  readonly form: typeof import("$app/server").form;
+  readonly command: typeof import("$app/server").command;
+  readonly getRequestEvent: typeof import("$app/server").getRequestEvent;
+}
 
 type HandleInput = Parameters<Handle>[0];
 type EffectHandleInput = Omit<HandleInput, "resolve"> & {
@@ -164,7 +169,7 @@ export interface SvelteKitEffectRuntime<
    *
    * The effect may require any of the app-level or remote-level services
    * plus `CurrentRequestEvent`. The returned function is what SvelteKit's
-   * `$app/server.query(...)` produces, so it can be imported and awaited
+   * remote `query(...)` produces, so it can be imported and awaited
    * from `+page.svelte`, `load`, or other remote functions.
    *
    * Overloads:
@@ -322,6 +327,11 @@ export type SvelteKitEffectBridgeOptions<
       >;
       /** Translates typed Effect failures into SvelteKit-visible results. */
       readonly mapError?: ErrorMapper;
+      /**
+       * SvelteKit's `$app/server` exports. Pass these when using remote
+       * `query`, `form`, or `command` helpers.
+       */
+      readonly remote?: SvelteKitServerRemoteApi;
     }
   | {
       readonly runtime?: never;
@@ -364,6 +374,11 @@ export type SvelteKitEffectBridgeOptions<
       >;
       /** Translates typed Effect failures into SvelteKit-visible results. */
       readonly mapError?: ErrorMapper;
+      /**
+       * SvelteKit's `$app/server` exports. Pass these when using remote
+       * `query`, `form`, or `command` helpers.
+       */
+      readonly remote?: SvelteKitServerRemoteApi;
     }
   | {
       readonly runtime?: never;
@@ -405,6 +420,11 @@ export type SvelteKitEffectBridgeOptions<
       >;
       /** Translates typed Effect failures into SvelteKit-visible results. */
       readonly mapError?: ErrorMapper;
+      /**
+       * SvelteKit's `$app/server` exports. Pass these when using remote
+       * `query`, `form`, or `command` helpers.
+       */
+      readonly remote?: SvelteKitServerRemoteApi;
     };
 
 export interface SvelteKitEffectRuntimeStatic {
@@ -467,6 +487,7 @@ export const SvelteKitEffectRuntime: SvelteKitEffectRuntimeStatic = {
       any
     >;
     mapError?: ErrorMapper;
+    remote?: SvelteKitServerRemoteApi;
   }): SvelteKitEffectRuntime<any, any, any> {
     const {
       runtime: providedRuntime,
@@ -476,6 +497,7 @@ export const SvelteKitEffectRuntime: SvelteKitEffectRuntimeStatic = {
       remoteLayer,
       memoMap = Layer.makeMemoMapUnsafe(),
       mapError,
+      remote,
     } = options ?? {};
     const effectiveRemoteLayer = remoteLayer ?? requestLayer;
 
@@ -488,6 +510,14 @@ export const SvelteKitEffectRuntime: SvelteKitEffectRuntimeStatic = {
       ManagedRuntime.make(layer ?? Layer.empty, {
         memoMap,
       })) as ManagedRuntime.ManagedRuntime<any, any>;
+    const requireRemote = (method: "query" | "form" | "command") => {
+      if (remote === undefined) {
+        throw new TypeError(
+          `runtime.${method}: pass SvelteKit's remote server exports as the \`remote\` option to SvelteKitEffectRuntime.make(...) before using remote helpers`,
+        );
+      }
+      return remote;
+    };
     return {
       handle<E>(
         fn: (input: EffectHandleInput) => Effect.Effect<Response, E, any>,
@@ -666,6 +696,7 @@ export const SvelteKitEffectRuntime: SvelteKitEffectRuntimeStatic = {
         schemaOrEffect: StandardSchemaV1 | Effect.Effect<unknown, unknown, any>,
         fn?: (input: unknown) => Effect.Effect<unknown, unknown, any>,
       ): RemoteQueryFunction<any, any> {
+        const remoteApi = requireRemote("query");
         // SvelteKit's `query` callback executes inside the request store,
         // so `getRequestEvent()` is the documented way to recover the
         // current `RequestEvent` for layer/context provision. Validation
@@ -674,7 +705,7 @@ export const SvelteKitEffectRuntime: SvelteKitEffectRuntimeStatic = {
         const runEffect = async (
           effect: Effect.Effect<unknown, unknown, any>,
         ): Promise<unknown> => {
-          const event = getRequestEvent();
+          const event = remoteApi.getRequestEvent();
           const program = Effect.scoped(
             Effect.gen(function* () {
               const eventContext = Context.make(CurrentRequestEvent, event);
@@ -708,14 +739,14 @@ export const SvelteKitEffectRuntime: SvelteKitEffectRuntimeStatic = {
         // union without an `as` cast. SvelteKit's `query` overload return
         // types are structurally assignable to `RemoteQueryFunction<any, any>`.
         if (Effect.isEffect(schemaOrEffect)) {
-          return remoteQuery(() => runEffect(schemaOrEffect));
+          return remoteApi.query(() => runEffect(schemaOrEffect));
         }
         if (fn === undefined) {
           throw new TypeError(
             "runtime.query: schema form requires a function as the second argument",
           );
         }
-        return remoteQuery(schemaOrEffect, (input) => runEffect(fn(input)));
+        return remoteApi.query(schemaOrEffect, (input) => runEffect(fn(input)));
       },
 
       form(
@@ -728,6 +759,7 @@ export const SvelteKitEffectRuntime: SvelteKitEffectRuntimeStatic = {
           issue: InvalidField<RemoteFormInput>,
         ) => Effect.Effect<unknown, unknown, any>,
       ): RemoteForm<any, any> {
+        const remoteApi = requireRemote("form");
         // SvelteKit's `form` callback runs after SvelteKit has parsed the
         // remote form body. For schema / unchecked forms, pass that parsed
         // input into the user's Effect callback instead of reading the body
@@ -735,7 +767,7 @@ export const SvelteKitEffectRuntime: SvelteKitEffectRuntimeStatic = {
         const runEffect = async (
           effect: Effect.Effect<unknown, unknown, any>,
         ): Promise<unknown> => {
-          const event = getRequestEvent();
+          const event = remoteApi.getRequestEvent();
           const program = Effect.scoped(
             Effect.gen(function* () {
               const eventContext = Context.make(CurrentRequestEvent, event);
@@ -766,7 +798,7 @@ export const SvelteKitEffectRuntime: SvelteKitEffectRuntimeStatic = {
         };
 
         if (Effect.isEffect(schemaOrEffect)) {
-          return remoteForm(() => runEffect(schemaOrEffect));
+          return remoteApi.form(() => runEffect(schemaOrEffect));
         }
         if (fn === undefined) {
           throw new TypeError(
@@ -774,11 +806,11 @@ export const SvelteKitEffectRuntime: SvelteKitEffectRuntimeStatic = {
           );
         }
         if (schemaOrEffect === "unchecked") {
-          return remoteForm("unchecked", (input, issue) =>
+          return remoteApi.form("unchecked", (input, issue) =>
             runEffect(fn(input, issue)),
           );
         }
-        return remoteForm(schemaOrEffect, (input, issue) =>
+        return remoteApi.form(schemaOrEffect, (input, issue) =>
           runEffect(fn(input, issue)),
         );
       },
@@ -789,16 +821,16 @@ export const SvelteKitEffectRuntime: SvelteKitEffectRuntimeStatic = {
           input: StandardSchemaV1.InferOutput<S>,
         ) => Effect.Effect<A, E, any>,
       ): RemoteCommand<StandardSchemaV1.InferInput<S>, A> {
+        const remoteApi = requireRemote("command");
         // SvelteKit validates `input` against the schema before calling
         // this callback, so we receive an already-validated value. The
         // request store is active here, so `getRequestEvent()` is the
         // documented way to recover the current `RequestEvent` for
         // layer/context provision — same pattern as `query` and `form`.
-        // The local `declare module "$app/server"` augmentation above
-        // adds an async-returning overload, so the inferred `Output` is
-        // `A` rather than `Promise<A>`.
-        return remoteCommand(schema, async (input): Promise<A> => {
-          const event = getRequestEvent();
+        // The local module augmentation above adds an async-returning
+        // overload, so the inferred `Output` is `A` rather than `Promise<A>`.
+        return remoteApi.command(schema, async (input): Promise<A> => {
+          const event = remoteApi.getRequestEvent();
           const program = Effect.scoped(
             Effect.gen(function* () {
               const eventContext = Context.make(CurrentRequestEvent, event);
@@ -833,3 +865,5 @@ export const SvelteKitEffectRuntime: SvelteKitEffectRuntimeStatic = {
     };
   },
 };
+
+export type { SvelteKitServerRemoteApi };
