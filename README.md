@@ -1,6 +1,8 @@
 # SvelteKit Effect Runtime
 
-`sveltekit-effect-runtime` is a runtime-only adapter for using `Effect` in SvelteKit server APIs.
+`sveltekit-effect-runtime` is a thin runtime adapter for running `Effect` programs at SvelteKit server edges.
+
+It does not replace SvelteKit routing, actions, loads, or remote functions. It gives those entry points a shared Effect runtime, fresh invocation-local services, and SvelteKit-native error/control-flow behavior.
 
 ## Install
 
@@ -10,209 +12,335 @@ pnpm add sveltekit-effect-runtime effect@4.0.0-beta.52
 bun add sveltekit-effect-runtime effect@4.0.0-beta.52
 ```
 
-**Note**: Update the Effect v4 version to the latest version. Effect 4 is only supported.
+Effect v4 is required. You also need a compatible `@sveltejs/kit` project.
 
-You also need a compatible `@sveltejs/kit` project.
+## Quick Start
 
-## Quick start
-
-Import the wrapper that matches the SvelteKit server surface you are using:
+Create one runtime instance and reuse it from your SvelteKit server modules.
 
 ```ts
-import { Effect } from "effect";
-import { wrapHandler } from "sveltekit-effect-runtime";
+// src/lib/server/runtime.ts
+import { SvelteKitEffectRuntime } from "sveltekit-effect-runtime";
 
-export const GET = wrapHandler(Effect.succeed(new Response("ok")));
+export const runtime = SvelteKitEffectRuntime.make();
 ```
 
-For app-wide configuration, call `configureRuntime(...)` once in `hooks.server.ts`, usually from `wrapInit(...)`.
+```ts
+// src/routes/api/+server.ts
+import * as Effect from "effect/Effect";
+import { runtime } from "$lib/server/runtime";
+
+export const GET = runtime.handler(Effect.succeed(Response.json({ ok: true })));
+```
+
+## Runtime Setup
+
+`SvelteKitEffectRuntime.make(...)` accepts either an existing `ManagedRuntime` or an app-level `Layer`.
 
 ```ts
-// src/hooks.server.ts
-import { configureRuntime, wrapInit } from "sveltekit-effect-runtime";
+import { Context } from "effect";
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import { SvelteKitEffectRuntime } from "sveltekit-effect-runtime";
 
-export const init = wrapInit(() => {
-  configureRuntime({
-    logLevel: "Debug",
-  });
+class AppConfig extends Context.Service<
+  AppConfig,
+  { readonly appName: string }
+>()("app/AppConfig") {}
+
+const AppLayer = Layer.succeed(AppConfig)({
+  appName: "My app",
+});
+
+export const runtime = SvelteKitEffectRuntime.make({
+  layer: AppLayer,
 });
 ```
 
-## Supported helpers
+You can also pass:
 
-- `wrapHandler` for `+server.ts`
-- `wrapServerLoad` for `+page.server.ts` and `+layout.server.ts`
-- `universalLoad` for `+page.ts` and `+layout.ts`
-- `wrapActions` for `actions`
-- `wrapHandle`
-- `wrapHandleFetch`
-- `wrapHandleError`
-- `wrapHandleValidationError`
-- `wrapInit`
+- `runtime`: a pre-built `ManagedRuntime`
+- `memoMap`: shared app-level layer memoization when `layer` is used
+- `requestLayer`: fresh per handler/action invocation
+- `loadLayer`: fresh per server `load` invocation
+- `remoteLayer`: fresh per remote query/command/form invocation
+- `mapError`: edge error translation
 
-## Usage
+When `remoteLayer` is omitted, remote functions use `requestLayer`.
 
-```ts
-import { Effect } from "effect";
-import {
-  wrapActions,
-  wrapHandler,
-  wrapServerLoad,
-} from "sveltekit-effect-runtime";
+## Current Events
 
-export const GET = wrapHandler(Effect.succeed(new Response("ok")));
-
-export const load = wrapServerLoad(Effect.succeed({ message: "hello" }));
-
-export const actions = wrapActions({
-  default: Effect.succeed({ ok: true }),
-});
-```
-
-Server actions can also use the current request and return `fail(...)` values:
+SvelteKit event access stays inside the Effect program.
 
 ```ts
-// src/routes/+page.server.ts
-import { fail } from "@sveltejs/kit";
-import { Effect } from "effect";
-import { SvelteRequest, wrapActions } from "sveltekit-effect-runtime";
-
-export const actions = wrapActions({
-  add: Effect.gen(function* () {
-    const request = yield* SvelteRequest.SvelteRequest;
-    const formData = yield* Effect.promise(() => request.formData());
-    const left = Number(formData.get("left"));
-    const right = Number(formData.get("right"));
-
-    if (Number.isNaN(left) || Number.isNaN(right)) {
-      return yield* Effect.fail(fail(400, { message: "Invalid numbers" }));
-    }
-
-    return { total: left + right };
-  }),
-});
-```
-
-Request-scoped services are available inside wrapped request effects:
-
-```ts
-import { Effect } from "effect";
-import {
-  SvelteRequest,
-  SvelteResponse,
-  wrapHandler,
-} from "sveltekit-effect-runtime";
-
-export const GET = wrapHandler(
+export const GET = runtime.handler(
   Effect.gen(function* () {
-    const request = yield* SvelteRequest.SvelteRequest;
-
-    return yield* SvelteResponse.unsafeJson({
-      foo: request.method,
+    const event = yield* runtime.CurrentRequestEvent;
+    return Response.json({
+      path: event.url.pathname,
     });
   }),
 );
 ```
 
-Server loads work the same way:
+Use:
+
+- `runtime.CurrentRequestEvent` in handlers, actions, and remote functions
+- `runtime.CurrentServerLoadEvent` in server loads
+
+The service classes are also exported as `CurrentRequestEvent` and `CurrentServerLoadEvent` for layer definitions.
+
+## Request And Load Services
+
+Invocation layers are rebuilt for each call, so request-derived values are not cached across requests.
+
+```ts
+import { Context } from "effect";
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import {
+  CurrentRequestEvent,
+  CurrentServerLoadEvent,
+  SvelteKitEffectRuntime,
+} from "sveltekit-effect-runtime";
+
+class RequestMeta extends Context.Service<
+  RequestMeta,
+  { readonly path: string; readonly requestId: string }
+>()("app/RequestMeta") {}
+
+class LoadMeta extends Context.Service<
+  LoadMeta,
+  { readonly routeId: string | null }
+>()("app/LoadMeta") {}
+
+export const runtime = SvelteKitEffectRuntime.make({
+  requestLayer: Layer.effect(RequestMeta)(
+    Effect.gen(function* () {
+      const event = yield* CurrentRequestEvent.asEffect();
+      return {
+        path: event.url.pathname,
+        requestId: crypto.randomUUID(),
+      };
+    }),
+  ),
+  loadLayer: Layer.effect(LoadMeta)(
+    Effect.gen(function* () {
+      const event = yield* CurrentServerLoadEvent.asEffect();
+      return {
+        routeId: event.route.id,
+      };
+    }),
+  ),
+});
+```
+
+## Server Handlers
+
+`runtime.handler(...)` wraps `+server.ts` method exports.
+
+```ts
+// src/routes/test/+server.ts
+import * as Effect from "effect/Effect";
+import { RequestMeta, runtime } from "$lib/server/runtime";
+
+export const GET = runtime.handler(
+  Effect.gen(function* () {
+    const request = yield* RequestMeta.asEffect();
+    return Response.json(request);
+  }),
+);
+```
+
+## Server Loads
+
+`runtime.load(...)` wraps server `load` functions in `+page.server.ts` and `+layout.server.ts`.
 
 ```ts
 // src/routes/+page.server.ts
-import { Effect } from "effect";
-import { currentRequestEvent, wrapServerLoad } from "sveltekit-effect-runtime";
+import * as Effect from "effect/Effect";
+import { LoadMeta, runtime } from "$lib/server/runtime";
 
-export const load = wrapServerLoad(
-  currentRequestEvent.pipe(
-    Effect.map((event) => ({
-      path: event.url.pathname,
-    })),
-  ),
-);
-```
-
-Universal loads are supported too. On the server they use the managed runtime; in the browser they run directly with load-scoped services:
-
-```ts
-// src/routes/+layout.ts
-import { Effect } from "effect";
-import { currentLoadEvent, universalLoad } from "sveltekit-effect-runtime";
-
-export const load = universalLoad(
-  currentLoadEvent.pipe(
-    Effect.map((event) => ({
-      routeId: event.route.id,
-    })),
-  ),
-);
-```
-
-For hooks:
-
-```ts
-import {
-  SvelteHandleParams,
-  wrapHandle,
-  wrapHandleFetch,
-  wrapInit,
-} from "sveltekit-effect-runtime";
-
-export const init = wrapInit(myInitEffect);
-export const handle = wrapHandle(
+export const load = runtime.load(
   Effect.gen(function* () {
-    const { event, resolve } = yield* SvelteHandleParams.SvelteHandleParams;
-
-    return yield* resolve(event);
+    const loadMeta = yield* LoadMeta.asEffect();
+    return {
+      loadMeta,
+    };
   }),
 );
-export const handleFetch = wrapHandleFetch(myHandleFetchEffect);
 ```
 
-You can also install per-request or per-load services through `configureRuntime(...)`:
+## Actions
+
+`runtime.actions(...)` wraps a SvelteKit `actions` object. Each action is a direct `Effect`.
 
 ```ts
-import { Effect, Layer, Context } from "effect";
-import {
-  configureRuntime,
-  currentLoadEvent,
-  currentRequestEvent,
-} from "sveltekit-effect-runtime";
+// src/routes/+page.server.ts
+import { fail } from "@sveltejs/kit";
+import * as Effect from "effect/Effect";
+import { runtime } from "$lib/server/runtime";
 
-const RequestPath = Context.Service<string>("app/RequestPath");
-const RouteId = Context.Service<string | null>("app/RouteId");
+export const actions = runtime.actions({
+  save: Effect.gen(function* () {
+    const event = yield* runtime.CurrentRequestEvent;
+    const form = yield* Effect.promise(() => event.request.formData());
+    const name = String(form.get("name") ?? "").trim();
 
-configureRuntime({
-  requestLayer: Layer.effect(RequestPath)(
-    currentRequestEvent.pipe(Effect.map((event) => event.url.pathname)),
-  ),
-  loadLayer: Layer.effect(RouteId)(
-    currentLoadEvent.pipe(Effect.map((event) => event.route.id)),
-  ),
+    if (name.length === 0) {
+      return yield* Effect.fail(fail(400, { message: "Name is required" }));
+    }
+
+    return { ok: true, name };
+  }),
 });
 ```
 
-Effect-heavy apps can add request-derived services through `configureRuntime`:
+`ActionFailure` values from `fail(...)` are returned as action results. Redirects and HTTP errors still short-circuit with SvelteKit semantics.
+
+## Remote Functions
+
+The runtime includes wrappers for SvelteKit remote functions:
+
+- `runtime.query(...)`
+- `runtime.command(...)`
+- `runtime.form(...)`
+
+Remote functions depend on SvelteKit's remote-function support and must be enabled in your SvelteKit app.
 
 ```ts
-import {
-  configureRuntime,
-  currentRequestEvent,
-} from "sveltekit-effect-runtime";
-import { Effect, Layer, Context } from "effect";
+// src/routes/data.remote.ts
+import * as Effect from "effect/Effect";
+import { runtime } from "$lib/server/runtime";
 
-const RequestPath = Context.Service<string>("app/RequestPath");
+export const getSnapshot = runtime.query(
+  Effect.gen(function* () {
+    const event = yield* runtime.CurrentRequestEvent;
+    return {
+      path: event.url.pathname,
+    };
+  }),
+);
+```
 
-configureRuntime({
-  requestLayer: Layer.effect(RequestPath)(
-    currentRequestEvent.pipe(Effect.map((event) => event.url.pathname)),
-  ),
+Schema-backed query and command wrappers pass validated input into your Effect callback.
+
+```ts
+export const getTodo = runtime.query(todoIdSchema, (id) =>
+  Effect.gen(function* () {
+    return yield* Todos.getById(id);
+  }),
+);
+
+export const toggleTodo = runtime.command(todoIdSchema, (id) =>
+  Effect.gen(function* () {
+    yield* Todos.toggle(id);
+    return { ok: true };
+  }),
+);
+```
+
+Remote forms can be nullary or can receive parsed form input with `"unchecked"` or a Standard Schema.
+
+```ts
+import type { RemoteFormInput } from "@sveltejs/kit";
+
+type NoteInput = RemoteFormInput & {
+  readonly message?: string;
+};
+
+export const saveNote = runtime.form("unchecked", (input: NoteInput) =>
+  Effect.gen(function* () {
+    const message = (input.message ?? "").trim();
+    return { message };
+  }),
+);
+```
+
+Use the remote form object directly for SvelteKit's default enhanced behavior:
+
+```svelte
+<script lang="ts">
+  import { saveNote } from "./data.remote";
+</script>
+
+<form {...saveNote}>
+  <input name="message" />
+  <button type="submit" disabled={saveNote.pending > 0}>Save</button>
+</form>
+```
+
+Call `saveNote.enhance(callback)` only when you need a custom submit callback.
+
+## Error Mapping
+
+SvelteKit control-flow values are preserved:
+
+- `redirect(...)`
+- `error(...)`
+- `fail(...)` / `ActionFailure`
+
+Use `mapError` to translate domain failures at the edge.
+
+```ts
+import { error, redirect } from "@sveltejs/kit";
+import { Data } from "effect";
+
+class NotFound extends Data.TaggedError("NotFound")<{
+  readonly message: string;
+}> {}
+
+class NeedsLogin extends Data.TaggedError("NeedsLogin")<{
+  readonly next: string;
+}> {}
+
+export const runtime = SvelteKitEffectRuntime.make({
+  layer: AppLayer,
+  mapError: (failure) => {
+    if (failure instanceof NotFound) {
+      return error(404, { message: failure.message });
+    }
+    if (failure instanceof NeedsLogin) {
+      return redirect(303, `/login?next=${encodeURIComponent(failure.next)}`);
+    }
+    return failure;
+  },
 });
+```
+
+Unhandled failures and defects are logged with the full Effect `Cause` and converted to a SvelteKit 500 response.
+
+## API Summary
+
+```ts
+const runtime = SvelteKitEffectRuntime.make({
+  runtime,
+  layer,
+  memoMap,
+  requestLayer,
+  loadLayer,
+  remoteLayer,
+  mapError,
+});
+
+runtime.handler(effect);
+runtime.load(effect);
+runtime.actions({ name: effect });
+runtime.query(effect);
+runtime.query(schema, (input) => effect);
+runtime.command(schema, (input) => effect);
+runtime.form(effect);
+runtime.form("unchecked", (input, issue) => effect);
+runtime.form(schema, (input, issue) => effect);
+
+runtime.CurrentRequestEvent;
+runtime.CurrentServerLoadEvent;
 ```
 
 ## Notes
 
-- Async helpers that resolve to an `Effect` are supported.
-- `universalLoad` uses the managed runtime during SSR only. In the browser it runs the provided Effect directly with `currentLoadEvent` and any configured `loadLayer`.
-- `requestLayer` and `loadLayer` are evaluated per request/load and can depend on the current SvelteKit event.
-- `configureRuntime({ layer })` is for server-side runtime services. Do not rely on it for client-side `universalLoad` navigation.
-- Handler, load, and hook failures from `Effect.fail(...)` are propagated back to SvelteKit unchanged. If you want HTTP/status mapping, do that in your Effect program. `wrapActions` also passes through SvelteKit `ActionFailure` values.
-- Remote functions are not supported.
+- Build one runtime instance per app configuration and reuse it across server modules.
+- App-level services live in the shared `ManagedRuntime`.
+- Request, load, and remote layers are invocation-local and should hold request-derived services.
+- Wrapper inputs are direct `Effect` values, not callbacks that receive SvelteKit events.
+- Remote functions are still a SvelteKit experimental surface; this library wraps SvelteKit's transport rather than replacing it.
