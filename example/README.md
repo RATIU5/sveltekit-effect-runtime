@@ -1,26 +1,42 @@
-# Example app
+# sv
 
-This SvelteKit app is a local consumer of `sveltekit-effect-runtime`.
+Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
 
-It aliases `sveltekit-effect-runtime` to `../src/index.ts` in [vite.config.js](/Users/john.memmott/Developer/sveltekit-effect-bridge/example/vite.config.js) and [tsconfig.json](/Users/john.memmott/Developer/sveltekit-effect-bridge/example/tsconfig.json), so you can iterate on the library and the example side by side without publishing a package.
+## Creating a project
 
-## What it demonstrates
-
-- `wrapInit`, `wrapHandle`, `wrapHandleFetch`, `wrapHandleError`, and `wrapHandleValidationError` in `src/hooks.server.ts`
-- `wrapServerLoad` in `src/routes/+layout.server.ts` and `src/routes/+page.server.ts`
-- `universalLoad` in `src/routes/+layout.ts`
-- `wrapActions` in `src/routes/+page.server.ts`
-- `wrapHandler`, `SvelteRequest`, and `SvelteResponse` in `src/routes/api/runtime/+server.ts`
-- request-scoped and load-scoped runtime layers from `src/lib/demo/services.ts`
-
-## Important note
-
-`wrapHandleValidationError` is a remote-function hook in SvelteKit. This example wires it up in `src/hooks.server.ts`, but the app does not include a remote-function demo because `sveltekit-effect-runtime` intentionally focuses on handlers, loads, actions, and hooks rather than remote-function wrappers.
-
-## Commands
+If you're seeing this, you've probably already done this step. Congrats!
 
 ```sh
-pnpm dev
-pnpm check
-pnpm build
+# create a new project
+npx sv create my-app
 ```
+
+To recreate this project with the same configuration:
+
+```sh
+# recreate this project
+bun x sv@0.15.1 create --template minimal --types ts --install bun ./
+```
+
+## Developing
+
+Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+
+```sh
+npm run dev
+
+# or start the server and open the app in a new browser tab
+npm run dev -- --open
+```
+
+## Building
+
+To create a production version of your app:
+
+```sh
+npm run build
+```
+
+You can preview the production build with `npm run preview`.
+
+> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.

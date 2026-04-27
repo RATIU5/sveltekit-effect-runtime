@@ -23,6 +23,7 @@
     "sort-imports": "off",
     "new-cap": "off",
     "no-ternary": "off",
+    "capitalized-comments": "off",
     "func-names": ["warn", "always", { "generators": "never" }],
     "oxc/no-map-spread": "off",
     "oxc/no-accumulating-spread": "off",
@@ -88,7 +89,7 @@
       }
     ]
   },
-  "ignorePatterns": ["dist/**", "node_modules/**"],
+  "ignorePatterns": ["dist/**", "node_modules/**", ".reference/**"],
   "overrides": [
     {
       "files": ["**/*.test.ts", "**/*.spec.ts", "**/test/**/*.ts"],

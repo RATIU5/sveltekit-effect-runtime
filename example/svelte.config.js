@@ -1,31 +1,23 @@
-/* oxlint-disable eslint-plugin-import/no-nodejs-modules */
-import adapter from "@sveltejs/adapter-auto";
-import { relative, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import adapter from '@sveltejs/adapter-auto';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
-  compilerOptions: {
-    // Defaults to rune mode for the project, except for `node_modules`. Can be removed in Svelte 6.
-    runes: ({ filename }) => {
-      const relativePath = relative(import.meta.dirname, filename);
-      const pathSegments = relativePath.toLowerCase().split(sep);
-      const isExternalLibrary = pathSegments.includes("node_modules");
-
-      return isExternalLibrary ? undefined : true;
-    },
-  },
-  kit: {
-    alias: {
-      "sveltekit-effect-runtime": fileURLToPath(
-        new URL("../src/index.ts", import.meta.url),
-      ),
-    },
-    // Adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
-    // If your environment is not supported, or you settled on a specific environment, switch out the adapter.
-    // See https://svelte.dev/docs/kit/adapters for more information about adapters.
-    adapter: adapter(),
-  },
+	compilerOptions: {
+		// Force runes mode for the project, except for libraries. Can be removed in svelte 6.
+		runes: ({ filename }) => (filename.split(/[/\\]/).includes('node_modules') ? undefined : true),
+		experimental: {
+			async: true
+		}
+	},
+	kit: {
+		// adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
+		// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
+		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
+		adapter: adapter(),
+		experimental: {
+			remoteFunctions: true
+		}
+	}
 };
 
 export default config;

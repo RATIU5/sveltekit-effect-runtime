@@ -1,20 +1,13 @@
-import "@sveltejs/kit";
-
 // See https://svelte.dev/docs/kit/types#app.d.ts
-// For information about these interfaces.
+// for information about these interfaces
 declare global {
-  namespace App {
-    interface Error {
-      message: string;
-      detail?: string;
-      requestId?: string;
-    }
-    interface Locals {
-      requestId: string;
-      userAgent: string;
-    }
-    // Interface PageData {}
-    // Interface PageState {}
-    // Interface Platform {}
-  }
+	namespace App {
+		// interface Error {}
+		// interface Locals {}
+		// interface PageData {}
+		// interface PageState {}
+		// interface Platform {}
+	}
 }
+
+export type AppAmbient = never;

@@ -1,5 +1,11 @@
 # sveltekit-effect-runtime
 
+## 1.0.0
+
+### Major Changes
+
+- [`a727fd6`](https://github.com/RATIU5/sveltekit-effect-runtime/commit/a727fd61120861c9fdf66a15ae4dfca8734fb028) Thanks [@RATIU5](https://github.com/RATIU5)! - Complete re-write with a focus on a minimal API surface. This includes the following Svelte functions: load, actions, handlers, query, command, and form
+
 ## 0.3.1
 
 ### Patch Changes

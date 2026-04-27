@@ -1,6 +1,6 @@
 {
   "name": "sveltekit-effect-runtime",
-  "version": "0.3.1",
+  "version": "1.0.0",
   "description": "Runtime helpers for using Effect in SvelteKit server APIs",
   "keywords": [
     "effect",
@@ -40,11 +40,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "lint:check": "oxlint",
-    "lint": "oxlint --fix",
+    "lint:check": "oxlint src",
+    "lint": "oxlint --fix src",
     "fmt:check": "oxfmt --check",
     "fmt": "oxfmt",
-    "test": "vitest run",
+    "test": "vitest run --exclude .reference/** --passWithNoTests",
     "prepublishOnly": "bun typecheck && bun lint:check && pnpm test && pnpm build"
   },
   "devDependencies": {

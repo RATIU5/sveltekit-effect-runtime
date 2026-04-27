@@ -1,178 +1,352 @@
 <script lang="ts">
+	import {
+		getGreeting,
+		getRemoteSnapshot,
+		incrementRemoteCounter,
+		saveRemoteNote
+	} from './bridge.remote';
+
 	const { data, form } = $props();
 
-	const actionSummary = () =>
-		form ? JSON.stringify(form, undefined, 2) : 'Submit one of the forms below to exercise wrapActions().';
+	const remoteSnapshotQuery = getRemoteSnapshot();
+	const initialRemoteSnapshot = await remoteSnapshotQuery;
+	const greeting = await getGreeting('Bridge user');
+
+	const remoteSnapshot = $derived(remoteSnapshotQuery.current ?? initialRemoteSnapshot);
+
+	let commandResult = $state<Awaited<ReturnType<typeof incrementRemoteCounter>>>();
+	let commandPending = $state(false);
+	let commandError = $state<string>();
+
+	const incrementCounter = async () => {
+		commandPending = true;
+		commandError = undefined;
+		try {
+			commandResult = await incrementRemoteCounter(1).updates(
+				remoteSnapshotQuery.withOverride((current) => ({
+					...current,
+					snapshot: {
+						...current.snapshot,
+						counter: current.snapshot.counter + 1
+					}
+				}))
+			);
+		} catch (error) {
+			commandError = error instanceof Error ? error.message : 'Unable to increment counter';
+		} finally {
+			commandPending = false;
+		}
+	};
 </script>
 
-<section class="grid">
-	<article class="card">
-		<h2>What this page uses</h2>
+<svelte:head>
+	<title>SvelteKit Effect Bridge Example</title>
+</svelte:head>
+
+<main class="workspace">
+	<header class="page-head">
+		<div>
+			<p class="eyebrow">Runtime bridge example</p>
+			<h1>{data.load.appName}</h1>
+		</div>
+		<div class="links">
+			<a class="endpoint" href="/test">Open JSON endpoint</a>
+			<a class="secondary-link" href="/test?missing=true">404 mapping</a>
+			<a class="secondary-link" href="/test?login=true">Redirect mapping</a>
+		</div>
+	</header>
+
+	<section class="grid">
+		<div class="panel">
+			<h2>Server load</h2>
+			<dl>
+				<div>
+					<dt>Route</dt>
+					<dd>{data.load.routeId ?? 'unknown'}</dd>
+				</div>
+				<div>
+					<dt>Path</dt>
+					<dd>{data.load.path}</dd>
+				</div>
+				<div>
+					<dt>Stored name</dt>
+					<dd>{data.snapshot.lastName}</dd>
+				</div>
+			</dl>
+		</div>
+
+		<div class="panel">
+			<h2>SvelteKit action</h2>
+			<form method="POST" action="?/remember" class="stack">
+				<label>
+					<span>Name</span>
+					<input name="name" value={data.snapshot.lastName} autocomplete="name" />
+				</label>
+				<button type="submit">Remember name</button>
+			</form>
+			{#if form?.message}
+				<p class="result">{form.message}</p>
+			{/if}
+		</div>
+
+		<div class="panel">
+			<h2>Remote query</h2>
+			<dl>
+				<div>
+					<dt>Counter</dt>
+					<dd>{remoteSnapshot.snapshot.counter}</dd>
+				</div>
+				<div>
+					<dt>Request path</dt>
+					<dd>{remoteSnapshot.request.path}</dd>
+				</div>
+				<div>
+					<dt>Request id</dt>
+					<dd>{remoteSnapshot.request.requestId}</dd>
+				</div>
+			</dl>
+		</div>
+
+		<div class="panel">
+			<h2>Schema query</h2>
+			<p class="result">{greeting.greeting}</p>
+			<p class="muted">Resolved from {greeting.requestPath}</p>
+		</div>
+
+		<div class="panel">
+			<h2>Remote command</h2>
+			<div class="inline">
+				<button type="button" onclick={incrementCounter} disabled={commandPending}>
+					Increment counter
+				</button>
+				{#if commandResult}
+					<strong>{commandResult.counter}</strong>
+				{/if}
+			</div>
+			{#if commandResult}
+				<p class="muted">Last command request: {commandResult.requestId}</p>
+			{/if}
+			{#if commandError}
+				<p class="error">{commandError}</p>
+			{/if}
+		</div>
+
+		<div class="panel">
+			<h2>Remote form</h2>
+			<form {...saveRemoteNote} class="stack">
+				<label>
+					<span>Note</span>
+					<input name="message" placeholder="Add a short note" />
+				</label>
+				<button type="submit" disabled={saveRemoteNote.pending > 0}>Save note</button>
+			</form>
+			{#if saveRemoteNote.result}
+				<p class="muted">Saved by request {saveRemoteNote.result.requestId}</p>
+			{/if}
+		</div>
+	</section>
+
+	<section class="notes">
+		<h2>Store snapshot</h2>
 		<ul>
-			<li><code>wrapInit</code> configures request and load layers in <code>hooks.server.ts</code>.</li>
-			<li><code>wrapHandle</code> seeds <code>event.locals</code> and request IDs.</li>
-			<li><code>wrapHandleFetch</code> forwards request metadata to internal fetches.</li>
-			<li><code>wrapHandleError</code> is demonstrated by the <code>/api/error</code> route.</li>
-			<li><code>wrapHandleValidationError</code> is wired globally for remote-function validation errors.</li>
-			<li><code>wrapServerLoad</code>, <code>wrapActions</code>, <code>wrapHandler</code>, and <code>universalLoad</code> all run below.</li>
-			<li>Runtime logging is configured once in <code>hooks.server.ts</code> with <code>logLevel: 'Debug'</code>.</li>
+			{#each data.snapshot.notes as note}
+				<li>{note}</li>
+			{/each}
 		</ul>
-	</article>
-
-	<article class="card">
-		<h2>Server load snapshot</h2>
-		<dl>
-			<div><dt>Route</dt><dd>{data.serverDemo.path}</dd></div>
-			<div><dt>Method</dt><dd>{data.serverDemo.method}</dd></div>
-			<div><dt>User agent</dt><dd>{data.serverDemo.userAgent}</dd></div>
-			<div><dt>Header from handleFetch</dt><dd>{data.universalShell.apiSnapshot.forwardedRequestId}</dd></div>
-		</dl>
-	</article>
-
-	<article class="card">
-		<h2>Universal load snapshot</h2>
-		<dl>
-			<div><dt>Execution</dt><dd>{data.universalShell.execution}</dd></div>
-			<div><dt>Route ID</dt><dd>{data.universalShell.routeId}</dd></div>
-			<div><dt>API format</dt><dd>{data.universalShell.apiSnapshot.format}</dd></div>
-			<div><dt>API timestamp</dt><dd>{data.universalShell.apiSnapshot.computedAt}</dd></div>
-		</dl>
-		<p>Navigate to the secondary page and back. The root universal load reruns in the browser without touching the managed server runtime.</p>
-	</article>
-</section>
-
-<section class="grid">
-	<article class="card">
-		<h2>Action: add two numbers</h2>
-		<form method="POST" action="?/add">
-			<label>
-				<span>Left</span>
-				<input name="left" type="number" value="2" />
-			</label>
-			<label>
-				<span>Right</span>
-				<input name="right" type="number" value="5" />
-			</label>
-			<button type="submit">Compute on the server</button>
-		</form>
-	</article>
-
-	<article class="card">
-		<h2>Action: uppercase a phrase</h2>
-		<form method="POST" action="?/shout">
-			<label>
-				<span>Phrase</span>
-				<input name="phrase" type="text" value="effect in sveltekit" />
-			</label>
-			<button type="submit">Run named action</button>
-		</form>
-	</article>
-
-	<article class="card">
-		<h2>Latest action result</h2>
-		<pre>{actionSummary()}</pre>
-	</article>
-</section>
-
-<section class="grid">
-	<article class="card">
-		<h2>API handler examples</h2>
-		<p><a href="/api/runtime" target="_blank" rel="noreferrer">GET /api/runtime</a> returns JSON via <code>SvelteResponse.unsafeJson()</code>.</p>
-		<p><a href="/api/runtime?format=text" target="_blank" rel="noreferrer">GET /api/runtime?format=text</a> returns text via <code>SvelteResponse.unsafeText()</code>.</p>
-		<form method="POST" action="/api/runtime" target="_blank" rel="noreferrer" class="api-form">
-			<label>
-				<span>POST body</span>
-				<input name="body" type="text" value="hello from the example app" />
-			</label>
-			<button type="submit">POST /api/runtime</button>
-		</form>
-		<pre>curl -I http://localhost:5173/api/runtime</pre>
-	</article>
-
-	<article class="card">
-		<h2>Hook examples</h2>
-		<p>The app injects a request ID in <code>wrapHandle()</code> and forwards it to internal fetches in <code>wrapHandleFetch()</code>.</p>
-		<p><a href="/api/error" target="_blank" rel="noreferrer">GET /api/error</a> deliberately throws so <code>wrapHandleError()</code> can shape the error payload.</p>
-		<p><code>wrapHandleValidationError()</code> is configured in <code>hooks.server.ts</code>, but SvelteKit only calls it for remote-function input validation failures.</p>
-	</article>
- </section>
+	</section>
+</main>
 
 <style>
-	.grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
-		gap: 1rem;
-		padding: 1rem 2rem 2rem;
+	:global(body) {
+		margin: 0;
+		background: #f7f7f4;
+		color: #1f2528;
+		font-family:
+			Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 	}
 
-	.card {
-		padding: 1.25rem;
-		border-radius: 1rem;
-		background: rgba(255, 255, 255, 0.85);
-		border: 1px solid rgba(15, 23, 42, 0.08);
-		box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+	.workspace {
+		width: min(1120px, calc(100vw - 32px));
+		margin: 0 auto;
+		padding: 32px 0 48px;
+	}
+
+	.page-head {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 16px;
+		margin-bottom: 24px;
+		border-bottom: 1px solid #d7d9d2;
+		padding-bottom: 18px;
+	}
+
+	h1,
+	h2,
+	p {
+		margin: 0;
+	}
+
+	h1 {
+		font-size: 34px;
+		line-height: 1.1;
+		font-weight: 720;
 	}
 
 	h2 {
-		margin-top: 0;
+		font-size: 16px;
+		line-height: 1.3;
+		font-weight: 700;
 	}
 
-	form {
+	.eyebrow,
+	.muted,
+	dt {
+		color: #5d6668;
+	}
+
+	.eyebrow {
+		margin-bottom: 6px;
+		font-size: 13px;
+		text-transform: uppercase;
+	}
+
+	.grid {
 		display: grid;
-		gap: 0.75rem;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 14px;
 	}
 
-	label {
+	.panel,
+	.notes {
+		border: 1px solid #d7d9d2;
+		border-radius: 8px;
+		background: #ffffff;
+		padding: 16px;
+	}
+
+	.panel {
 		display: grid;
-		gap: 0.35rem;
-	}
-
-	input {
-		padding: 0.7rem 0.8rem;
-		border: 1px solid rgba(15, 23, 42, 0.16);
-		border-radius: 0.75rem;
-		font: inherit;
-	}
-
-	button {
-		padding: 0.8rem 1rem;
-		border: none;
-		border-radius: 999px;
-		background: #0f766e;
-		color: white;
-		font: inherit;
-		cursor: pointer;
+		gap: 14px;
+		min-height: 184px;
 	}
 
 	dl {
 		display: grid;
-		gap: 0.75rem;
+		gap: 10px;
 		margin: 0;
 	}
 
 	dl div {
 		display: grid;
-		gap: 0.2rem;
+		grid-template-columns: 92px minmax(0, 1fr);
+		gap: 12px;
 	}
 
-	dt {
-		font-weight: 700;
+	dt,
+	dd,
+	.muted,
+	.result,
+	.error,
+	li {
+		font-size: 14px;
+		line-height: 1.45;
 	}
 
 	dd {
 		margin: 0;
+		overflow-wrap: anywhere;
 	}
 
-	pre {
-		margin: 0;
-		padding: 1rem;
-		overflow: auto;
-		border-radius: 0.75rem;
-		background: #0f172a;
-		color: #f8fafc;
+	.stack {
+		display: grid;
+		gap: 10px;
 	}
 
-	ul {
-		padding-left: 1.2rem;
+	label {
+		display: grid;
+		gap: 6px;
+		font-size: 13px;
+		color: #3e474a;
+	}
+
+	input {
+		box-sizing: border-box;
+		width: 100%;
+		border: 1px solid #c8cbc3;
+		border-radius: 6px;
+		padding: 9px 10px;
+		font: inherit;
+	}
+
+	button,
+	.endpoint {
+		border: 1px solid #1f2528;
+		border-radius: 6px;
+		background: #1f2528;
+		color: #ffffff;
+		padding: 9px 12px;
+		font: inherit;
+		font-weight: 650;
+		text-decoration: none;
+		cursor: pointer;
+	}
+
+	.links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		justify-content: flex-end;
+	}
+
+	.secondary-link {
+		border: 1px solid #c8cbc3;
+		border-radius: 6px;
+		color: #1f2528;
+		padding: 9px 12px;
+		font-size: 14px;
+		font-weight: 650;
+		text-decoration: none;
+	}
+
+	button:disabled {
+		cursor: wait;
+		opacity: 0.55;
+	}
+
+	.inline {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+
+	.result {
+		color: #255c3b;
+	}
+
+	.error {
+		color: #a32121;
+	}
+
+	.notes {
+		margin-top: 14px;
+	}
+
+	.notes ul {
+		display: grid;
+		gap: 8px;
+		margin: 12px 0 0;
+		padding-left: 18px;
+	}
+
+	@media (max-width: 860px) {
+		.page-head {
+			align-items: flex-start;
+			flex-direction: column;
+		}
+
+		.grid {
+			grid-template-columns: 1fr;
+		}
 	}
 </style>

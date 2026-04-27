@@ -1,123 +1,42 @@
-import { ExampleRequestContext } from "$lib/demo/services";
-import { fail, type RequestEvent } from "@sveltejs/kit";
-import { Effect } from "effect";
-import {
-  SvelteRequest,
-  currentRequestEvent,
-  wrapActions,
-  wrapServerLoad,
-} from "sveltekit-effect-runtime";
-
+import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
+import * as Effect from "effect/Effect";
 
-const parseNumber = (value: FormDataEntryValue | null): number =>
-  Number.parseFloat(typeof value === "string" ? value : "0");
+import { DemoStore, LoadMeta, RequestMeta, runtime } from "$lib";
 
-const readFormData = (event: RequestEvent) =>
-  Effect.promise(() => event.request.formData());
-
-const readAddInputs = (event: RequestEvent) =>
-  readFormData(event).pipe(
-    Effect.map((formData) => ({
-      formData,
-      left: parseNumber(formData.get("left")),
-      right: parseNumber(formData.get("right")),
-    })),
-  );
-
-const failInvalidAddInput = (formData: FormData) =>
+export const load: PageServerLoad = runtime.load(
   Effect.gen(function* () {
-    yield* Effect.logWarning("add-action:invalid-input", {
-      left: formData.get("left"),
-      right: formData.get("right"),
-    });
-
-    return yield* Effect.fail(
-      fail(400, {
-        message: "Both values must be valid numbers.",
-        type: "sum",
-      }),
-    );
-  });
-
-export const load: PageServerLoad = wrapServerLoad(
-  Effect.gen(function* () {
-    const requestContext = yield* ExampleRequestContext;
-    const event = yield* currentRequestEvent;
-    const request = yield* SvelteRequest.SvelteRequest;
-
+    const loadMeta = yield* LoadMeta.asEffect();
+    const store = yield* DemoStore.asEffect();
+    const snapshot = yield* store.snapshot();
     return {
-      serverDemo: {
-        method: request.method,
-        path: event.url.pathname,
-        requestId: requestContext.requestId,
-        userAgent: requestContext.userAgent,
-      },
+      load: loadMeta,
+      snapshot,
     };
   }),
 );
 
-export const actions: Actions = wrapActions({
-  add: (event) =>
-    Effect.gen(function* () {
-      const requestContext = yield* ExampleRequestContext;
-      const request = yield* SvelteRequest.SvelteRequest;
-      yield* Effect.logInfo("add-action:start", {
-        path: requestContext.path,
-        requestId: requestContext.requestId,
-      });
+export const actions = runtime.actions({
+  remember: Effect.gen(function* () {
+    const event = yield* runtime.CurrentRequestEvent;
+    const request = yield* RequestMeta.asEffect();
+    const store = yield* DemoStore.asEffect();
+    const form = yield* Effect.promise<FormData>(() => event.request.formData());
+    const rawName = form.get("name");
+    const name = typeof rawName === "string" ? rawName.trim() : "";
 
-      const { formData, left, right } = yield* readAddInputs(event);
-      yield* Effect.logDebug("add-action:parsed-values", {
-        left,
-        right,
-        method: request.method,
-      });
+    if (name.length === 0) {
+      return yield* Effect.fail(
+        fail(400, {
+          message: "Enter a name before submitting the SvelteKit action.",
+        }),
+      );
+    }
 
-      if (Number.isNaN(left) || Number.isNaN(right)) {
-        return yield* failInvalidAddInput(formData);
-      }
-
-      yield* Effect.logInfo("add-action:success", {
-        requestId: requestContext.requestId,
-        total: left + right,
-      });
-
-      return {
-        requestId: requestContext.requestId,
-        total: left + right,
-        type: "sum",
-      };
-    }),
-  shout: (event) =>
-    Effect.gen(function* () {
-      const requestContext = yield* ExampleRequestContext;
-      yield* Effect.logInfo("shout-action:start", {
-        path: requestContext.path,
-        requestId: requestContext.requestId,
-      });
-      const formData = yield* readFormData(event);
-      const phraseEntry = formData.get("phrase");
-      const phrase = typeof phraseEntry === "string" ? phraseEntry.trim() : "";
-
-      if (phrase.length === 0) {
-        return yield* Effect.fail(
-          fail(400, {
-            message: "Enter a phrase before submitting.",
-            type: "shout",
-          }),
-        );
-      }
-
-      yield* Effect.logInfo("shout-action:success", {
-        echoed: phrase.toUpperCase(),
-        requestId: requestContext.requestId,
-      });
-
-      return {
-        echoed: phrase.toUpperCase(),
-        requestId: requestContext.requestId,
-        type: "shout",
-      };
-    }),
-});
+    const remembered = yield* store.rememberName(name);
+    return {
+      message: `Stored "${remembered}" from ${request.path}`,
+      requestId: request.requestId,
+    };
+  }),
+}) satisfies Actions;
