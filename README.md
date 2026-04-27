@@ -155,8 +155,9 @@ export const GET = runtime.handler(
 ## Server Hooks
 
 `runtime.handle(...)` wraps SvelteKit's `handle` hook in `src/hooks.server.ts`.
-The hook callback receives SvelteKit's `{ event, resolve }` input, but `resolve`
-is already lifted into an Effect, so you can call it with `yield*`.
+The hook callback receives SvelteKit's raw `{ event, resolve }` input, so you
+can pass `resolve` directly to other SvelteKit middleware. When calling it from
+inside `Effect.gen`, wrap or await it at the call site.
 
 ```ts
 // src/hooks.server.ts
@@ -165,9 +166,13 @@ import { runtime } from "$lib/server/runtime";
 
 export const handle = runtime.handle(({ event, resolve }) =>
   Effect.gen(function* () {
-    const response = yield* resolve(event, {
-      filterSerializedResponseHeaders: (name) => name === "x-request-id",
-    });
+    const response = yield* Effect.promise(() =>
+      Promise.resolve(
+        resolve(event, {
+          filterSerializedResponseHeaders: (name) => name === "x-request-id",
+        }),
+      ),
+    );
     const writableResponse = new Response(response.body, response);
 
     writableResponse.headers.set("x-powered-by", "effect");
@@ -176,9 +181,10 @@ export const handle = runtime.handle(({ event, resolve }) =>
 );
 ```
 
-Use `return yield* Effect.succeed(new Response(...))` to bypass SvelteKit
-entirely, or `yield* resolve(event, options)` to continue through SvelteKit's
-normal routing and rendering.
+Use `Effect.succeed(new Response(...))` to bypass SvelteKit entirely, pass the
+raw `resolve` function to middleware that expects it, or wrap
+`resolve(event, options)` to continue through SvelteKit's normal routing and
+rendering inside an Effect.
 
 ## Server Loads
 
@@ -351,7 +357,7 @@ const runtime = SvelteKitEffectRuntime.make({
   mapError,
 });
 
-runtime.handle(({ event, resolve }) => effect);
+runtime.handle(({ event, resolve }) => effect); // resolve is SvelteKit's raw resolver
 runtime.handler(effect);
 runtime.load(effect);
 runtime.actions({ name: effect });

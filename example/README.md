@@ -2,7 +2,7 @@
 
 This app demonstrates the bridge across the main SvelteKit server surfaces:
 
-- `src/hooks.server.ts` uses `runtime.handle(...)` and `yield* resolve(event, options)`
+- `src/hooks.server.ts` uses `runtime.handle(...)` with SvelteKit's raw `resolve`
 - `src/routes/+page.server.ts` uses `runtime.load(...)` and `runtime.actions(...)`
 - `src/routes/test/+server.ts` uses `runtime.handler(...)`
 - `src/routes/bridge.remote.ts` uses `runtime.query(...)`, `runtime.command(...)`, and `runtime.form(...)`
