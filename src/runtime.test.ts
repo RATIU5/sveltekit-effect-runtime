@@ -186,7 +186,9 @@ describe("SvelteKitEffectRuntime", () => {
     const handle = runtime.handle(({ event, resolve }) =>
       Effect.gen(function* () {
         const info = yield* RequestInfo.asEffect();
-        const response = yield* resolve(event);
+        const response = yield* Effect.promise(() =>
+          Promise.resolve(resolve(event)),
+        );
         response.headers.set("x-app", info.app);
         response.headers.set("x-path", info.path);
         return response;

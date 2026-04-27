@@ -64,12 +64,8 @@ type InvocationLayerFactory<Event, RIn, ROut, E = never> =
       | Effect.Effect<Layer.Layer<ROut, E, RIn>, E, RIn>);
 
 type HandleInput = Parameters<Handle>[0];
-type HandleResolve = HandleInput["resolve"];
 type EffectHandleInput = Omit<HandleInput, "resolve"> & {
-  readonly resolve: (
-    event: Parameters<HandleResolve>[0],
-    options?: Parameters<HandleResolve>[1],
-  ) => Effect.Effect<Response>;
+  readonly resolve: HandleInput["resolve"];
 };
 
 /**
@@ -94,10 +90,11 @@ export interface SvelteKitEffectRuntime<
    * hook (the export from `src/hooks.server.ts`).
    *
    * The callback receives `{ event, resolve }`, where `resolve` is the
-   * normal SvelteKit resolver lifted into an Effect. This lets hooks
-   * short-circuit, call `yield* resolve(event)`, or pass resolve options
-   * such as `transformPageChunk`. The returned effect may require any of
-   * the app-level or request-level services plus `CurrentRequestEvent`.
+   * normal SvelteKit resolver. This lets hooks short-circuit, await
+   * `resolve(event)`, or pass the raw resolver to middleware expecting
+   * SvelteKit's native `resolve` function. The returned effect may require
+   * any of the app-level or request-level services plus
+   * `CurrentRequestEvent`.
    *
    * `resolve(...)` itself returns a response rather than throwing route
    * errors; failures from the Effect program still pass through
@@ -515,10 +512,7 @@ export const SvelteKitEffectRuntime: SvelteKitEffectRuntimeStatic = {
               );
               const effectInput: EffectHandleInput = {
                 event: input.event,
-                resolve: (event, resolveOptions) =>
-                  Effect.promise(() =>
-                    Promise.resolve(input.resolve(event, resolveOptions)),
-                  ),
+                resolve: input.resolve,
               };
               return yield* fn(effectInput).pipe(
                 Effect.provideContext(

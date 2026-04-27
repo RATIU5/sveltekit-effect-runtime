@@ -1,9 +1,6 @@
 {
   "$schema": "../node_modules/@changesets/config/schema.json",
-  "changelog": [
-    "@changesets/changelog-github",
-    { "repo": "RATIU5/sveltekit-effect-runtime" }
-  ],
+  "changelog": "@changesets/cli/changelog",
   "commit": false,
   "fixed": [],
   "linked": [],

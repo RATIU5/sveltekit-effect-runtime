@@ -1,5 +1,11 @@
 # sveltekit-effect-runtime
 
+## 1.2.0
+
+### Minor Changes
+
+- f342014: updated the handle method to give a resolve function that's not an effect function generator
+
 ## 1.1.0
 
 ### Minor Changes
