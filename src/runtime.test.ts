@@ -168,6 +168,55 @@ describe("SvelteKitEffectRuntime", () => {
     });
   });
 
+  it("wraps the server handle hook with request context and resolve access", async () => {
+    const runtime = SvelteKitEffectRuntime.make({
+      layer: Layer.succeed(AppValue)("app-value"),
+      requestLayer: Layer.effect(RequestInfo)(
+        Effect.gen(function* () {
+          const event = yield* CurrentRequestEvent.asEffect();
+          const app = yield* AppValue.asEffect();
+          return {
+            app,
+            path: event.url.pathname,
+          };
+        }),
+      ),
+    });
+
+    const handle = runtime.handle(({ event, resolve }) =>
+      Effect.gen(function* () {
+        const info = yield* RequestInfo.asEffect();
+        const response = yield* resolve(event);
+        response.headers.set("x-app", info.app);
+        response.headers.set("x-path", info.path);
+        return response;
+      }),
+    );
+
+    const response = await handle({
+      event: makeRequestEvent("/hook"),
+      resolve: () => new Response("resolved"),
+    });
+
+    expect(await response.text()).toBe("resolved");
+    expect(response.headers.get("x-app")).toBe("app-value");
+    expect(response.headers.get("x-path")).toBe("/hook");
+  });
+
+  it("lets handle hooks short-circuit without calling resolve", async () => {
+    const runtime = SvelteKitEffectRuntime.make();
+    const resolve = vi.fn(() => new Response("resolved"));
+    const handle = runtime.handle(() => Effect.succeed(new Response("custom")));
+
+    const response = await handle({
+      event: makeRequestEvent("/custom"),
+      resolve,
+    });
+
+    expect(await response.text()).toBe("custom");
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
   it("provides current request and app services while resolving effect request-layer factories", async () => {
     const runtime = SvelteKitEffectRuntime.make({
       layer: Layer.succeed(AppValue)("app-value"),

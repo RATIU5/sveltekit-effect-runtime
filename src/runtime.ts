@@ -5,6 +5,7 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type {
   ActionFailure,
+  Handle,
   InvalidField,
   RemoteCommand,
   RemoteForm,
@@ -62,6 +63,15 @@ type InvocationLayerFactory<Event, RIn, ROut, E = never> =
       | Layer.Layer<ROut, E, RIn>
       | Effect.Effect<Layer.Layer<ROut, E, RIn>, E, RIn>);
 
+type HandleInput = Parameters<Handle>[0];
+type HandleResolve = HandleInput["resolve"];
+type EffectHandleInput = Omit<HandleInput, "resolve"> & {
+  readonly resolve: (
+    event: Parameters<HandleResolve>[0],
+    options?: Parameters<HandleResolve>[1],
+  ) => Effect.Effect<Response>;
+};
+
 /**
  * The bridge between Effect programs and SvelteKit's server entry points.
  *
@@ -79,6 +89,25 @@ export interface SvelteKitEffectRuntime<
   RLoad = never,
   RRemote = RReq,
 > {
+  /**
+   * Wraps an Effect-producing function into SvelteKit's server `handle`
+   * hook (the export from `src/hooks.server.ts`).
+   *
+   * The callback receives `{ event, resolve }`, where `resolve` is the
+   * normal SvelteKit resolver lifted into an Effect. This lets hooks
+   * short-circuit, call `yield* resolve(event)`, or pass resolve options
+   * such as `transformPageChunk`. The returned effect may require any of
+   * the app-level or request-level services plus `CurrentRequestEvent`.
+   *
+   * `resolve(...)` itself returns a response rather than throwing route
+   * errors; failures from the Effect program still pass through
+   * `mapError` and SvelteKit control-flow values are preserved.
+   */
+  handle<E>(
+    f: (
+      input: EffectHandleInput,
+    ) => Effect.Effect<Response, E, RApp | RReq | CurrentRequestEvent>,
+  ): Handle;
   /**
    * Wraps an Effect that produces a `Response` into a SvelteKit server
    * handler (the export from `+server.ts`).
@@ -463,6 +492,54 @@ export const SvelteKitEffectRuntime: SvelteKitEffectRuntimeStatic = {
         memoMap,
       })) as ManagedRuntime.ManagedRuntime<any, any>;
     return {
+      handle<E>(
+        fn: (input: EffectHandleInput) => Effect.Effect<Response, E, any>,
+      ): Handle {
+        return async (input): Promise<Response> => {
+          const program = Effect.scoped(
+            Effect.gen(function* () {
+              const eventContext = Context.make(
+                CurrentRequestEvent,
+                input.event,
+              );
+              const resolved =
+                typeof requestLayer === "function"
+                  ? requestLayer(input.event)
+                  : requestLayer;
+              const resolvedLayer = Effect.isEffect(resolved)
+                ? yield* resolved.pipe(Effect.provideContext(eventContext))
+                : resolved;
+
+              const requestContext = yield* Layer.build(resolvedLayer).pipe(
+                Effect.provideContext(eventContext),
+              );
+              const effectInput: EffectHandleInput = {
+                event: input.event,
+                resolve: (event, resolveOptions) =>
+                  Effect.promise(() =>
+                    Promise.resolve(input.resolve(event, resolveOptions)),
+                  ),
+              };
+              return yield* fn(effectInput).pipe(
+                Effect.provideContext(
+                  Context.mergeAll(requestContext, eventContext),
+                ),
+              );
+            }),
+          );
+
+          const exit = await runtime.runPromiseExit(program, {
+            signal: input.event.request.signal,
+          });
+
+          return translateExit(
+            exit,
+            { phase: "handle", event: input.event },
+            mapError,
+          );
+        };
+      },
+
       handler<A extends Response, E>(effect: Effect.Effect<A, E, any>) {
         return async (_event: RequestEvent): Promise<A> => {
           // The request layer is rebuilt per invocation so it can close

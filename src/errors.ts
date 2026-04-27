@@ -45,6 +45,7 @@ const throwIfControlFlow = (value: unknown): void => {
  * load) and has access to the originating event.
  */
 export type ErrorContext =
+  | { readonly phase: "handle"; readonly event: RequestEvent }
   | { readonly phase: "handler"; readonly event: RequestEvent }
   | { readonly phase: "load"; readonly event: ServerLoadEvent }
   | {
